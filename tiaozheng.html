@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RL交流阻抗与试验波形校准计算器</title>
+<style>
+- { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif; background: #f0f2f5; padding: 12px; color: #333; }
+.card { max-width: 520px; margin: 0 auto; background: #ffffff; border-radius: 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.08); padding: 18px; }
+h2 { font-size: 19px; text-align: center; margin-bottom: 16px; color: #1a1a1a; }
+.nav-tabs { display: flex; background: #e5e5ea; border-radius: 8px; padding: 3px; margin-bottom: 16px; }
+.tab-btn { flex: 1; padding: 8px 4px; font-size: 13px; font-weight: 600; text-align: center; border: none; background: transparent; color: #666; border-radius: 6px; cursor: pointer; }
+.tab-btn.active { background: #ffffff; color: #007aff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+.form-group { margin-bottom: 12px; }
+label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; color: #444; }
+input, select { width: 100%; height: 42px; padding: 0 10px; font-size: 15px; border: 1px solid #dcdfe6; border-radius: 8px; background: #fff; }
+input:focus, select:focus { border-color: #007aff; outline: none; }
+.row-2 { display: flex; gap: 10px; }
+.row-2 .form-group { flex: 1; }
+.btn-group { display: flex; gap: 8px; margin-top: 14px; }
+button.btn-main { flex: 1; height: 42px; font-size: 15px; font-weight: 600; border: none; border-radius: 8px; cursor: pointer; background: #007aff; color: #fff; }
+button.btn-sub { flex: 1; height: 42px; font-size: 15px; font-weight: 600; border: none; border-radius: 8px; cursor: pointer; background: #e5e5ea; color: #333; }
+.res-box { margin-top: 18px; padding-top: 14px; border-top: 1px solid #eee; }
+.res-title { font-size: 15px; font-weight: 600; margin-bottom: 10px; color: #007aff; }
+.res-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px dashed #f0f0f0; font-size: 14px; }
+.res-val { font-weight: 600; color: #1a1a1a; }
+.res-highlight { color: #ff3b30; font-weight: 700; }
+.res-good { color: #34c759; font-weight: 700; }
+.err-msg { color: #ff3b30; font-size: 13px; margin-top: 8px; text-align: center; display: none; }
+.tip-box { background: #f2f7ff; border-left: 4px solid #007aff; padding: 10px; border-radius: 4px; font-size: 12px; color: #555; margin-bottom: 14px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h2>RL交流阻抗与试验波形校准计算器</h2>
+
+  <div class="nav-tabs">
+    <button type="button" class="tab-btn active" onclick="switchTab(0)">1. 理论参数计算</button>
+    <button type="button" class="tab-btn" onclick="switchTab(1)">2. 实测波形调整</button>
+    <button type="button" class="tab-btn" onclick="switchTab(2)">3. 参数反推波形</button>
+  </div>
+
+  <div id="tab0" class="tab-content active">
+    <div class="tip-box">根据预期的目标电压、电流和功率因数，计算出理论上需要配置的总阻抗、电阻和电感量。</div>
+    <div class="row-2">
+      <div class="form-group">
+        <label>目标电压 U (V)</label>
+        <input type="number" id="t0_u" step="any" value="252">
+      </div>
+      <div class="form-group">
+        <label>目标电流 I (A)</label>
+        <input type="number" id="t0_i" step="any" value="32">
+      </div>
+    </div>
+    <div class="row-2">
+      <div class="form-group">
+        <label>目标功率因数 (0~1)</label>
+        <input type="number" id="t0_pf" step="any" value="0.77" min="0" max="1">
+      </div>
+      <div class="form-group">
+        <label>电源频率 (Hz)</label>
+        <select id="t0_f">
+          <option value="50" selected>50 Hz</option>
+          <option value="60">60 Hz</option>
+        </select>
+      </div>
+    </div>
+    <div class="btn-group">
+      <button type="button" class="btn-main" onclick="calcTab0()">计算理论参数</button>
+    </div>
+    <div id="t0_err" class="err-msg"></div>
+    <div class="res-box">
+      <div class="res-title">理论需求参数</div>
+      <div class="res-row"><span>总阻抗 Z:</span><span class="res-val" id="t0_resZ">-- Ω</span></div>
+      <div class="res-row"><span>理论电阻 R:</span><span class="res-val" id="t0_resR">-- Ω</span></div>
+      <div class="res-row"><span>理论感抗 XL:</span><span class="res-val" id="t0_resXL">-- Ω</span></div>
+      <div class="res-row"><span>理论电感 L:</span><span class="res-val res-highlight" id="t0_resL">-- mH</span></div>
+      <div class="res-row"><span>有功功率 P:</span><span class="res-val" id="t0_resP">-- kW</span></div>
+      <div class="res-row"><span>无功功率 Q:</span><span class="res-val" id="t0_resQ">-- kvar</span></div>
+    </div>
+  </div>
+
+  <div id="tab1" class="tab-content">
+    <div class="tip-box">输入试验中实际打出的波形数据，系统自动对比目标要求，并计算出需调整的电阻量与电感量。</div>
+    <div class="form-group"><label style="color:#007aff;">【理论目标值】</label></div>
+    <div class="row-2">
+      <div class="form-group">
+        <label>目标电流 I_目标 (A)</label>
+        <input type="number" id="t1targeti" step="any" value="32">
+      </div>
+      <div class="form-group">
+        <label>目标功率因数</label>
+        <input type="number" id="t1targetpf" step="any" value="0.77">
+      </div>
+    </div>
+    <div class="form-group"><label style="color:#ff3b30;">【实际波形测量值】</label></div>
+    <div class="row-2">
+      <div class="form-group">
+        <label>实测电压 U_实测 (V)</label>
+        <input type="number" id="t1actu" step="any" value="252">
+      </div>
+      <div class="form-group">
+        <label>实测电流 I_实测 (A)</label>
+        <input type="number" id="t1acti" step="any" value="30">
+      </div>
+    </div>
+    <div class="row-2">
+      <div class="form-group">
+        <label>实测功率因数</label>
+        <input type="number" id="t1actpf" step="any" value="0.80">
+      </div>
+      <div class="form-group">
+        <label>电源频率 (Hz)</label>
+        <select id="t1_f">
+          <option value="50" selected>50 Hz</option>
+          <option value="60">60 Hz</option>
+        </select>
+      </div>
+    </div>
+    <div class="btn-group">
+      <button type="button" class="btn-main" onclick="calcTab1()">计算调整补偿量</button>
+    </div>
+    <div id="t1_err" class="err-msg"></div>
+    <div class="res-box">
+      <div class="res-title">实测回路参数 vs 目标偏差</div>
+      <div class="res-row"><span>实测总阻抗 Z实测:</span><span class="res-val" id="t1actZ">-- Ω</span></div>
+      <div class="res-row"><span>实测电阻 R实测:</span><span class="res-val" id="t1actR">-- Ω</span></div>
+      <div class="res-row"><span>实测电感 L实测:</span><span class="res-val" id="t1actL">-- mH</span></div>
+      <div class="res-title" style="margin-top:12px; color:#ff3b30;">建议设备调节方案</div>
+      <div class="res-row"><span>电阻调整量 (ΔR):</span><span class="res-val res-highlight" id="t1_deltaR">-- Ω</span></div>
+      <div class="res-row"><span>电感调整量 (ΔL):</span><span class="res-val res-highlight" id="t1_deltaL">-- mH</span></div>
+      <div class="tip-box" id="t1_advice" style="margin-top:10px; margin-bottom:0;">点击上方计算获取调节建议</div>
+    </div>
+  </div>
+
+  <div id="tab2" class="tab-content">
+    <div class="tip-box">根据当前试验柜已经接好的电阻 R 和电感 L，预估在给定试验电压下会打出的电流波形与功率因数。</div>
+    <div class="row-2">
+      <div class="form-group">
+        <label>试验电压 U (V)</label>
+        <input type="number" id="t2_u" step="any" value="252">
+      </div>
+      <div class="form-group">
+        <label>电源频率 (Hz)</label>
+        <select id="t2_f">
+          <option value="50" selected>50 Hz</option>
+          <option value="60">60 Hz</option>
+        </select>
+      </div>
+    </div>
+    <div class="row-2">
+      <div class="form-group">
+        <label>接入电阻 R (Ω)</label>
+        <input type="number" id="t2_r" step="any" value="6.064">
+      </div>
+      <div class="form-group">
+        <label>接入电感 L (mH)</label>
+        <input type="number" id="t2_l" step="any" value="16.00">
+      </div>
+    </div>
+    <div class="btn-group">
+      <button type="button" class="btn-main" onclick="calcTab2()">预估输出波形</button>
+    </div>
+    <div id="t2_err" class="err-msg"></div>
+    <div class="res-box">
+      <div class="res-title">预期波形参数</div>
+      <div class="res-row"><span>回路感抗 XL:</span><span class="res-val" id="t2_xl">-- Ω</span></div>
+      <div class="res-row"><span>回路总阻抗 Z:</span><span class="res-val" id="t2_z">-- Ω</span></div>
+      <div class="res-row"><span>预期电流 I:</span><span class="res-val res-good" id="t2_i">-- A</span></div>
+      <div class="res-row"><span>预期功率因数 cosφ:</span><span class="res-val res-good" id="t2_pf">--</span></div>
+      <div class="res-row"><span>预期有功功率 P:</span><span class="res-val" id="t2_p">-- kW</span></div>
+      <div class="res-row"><span>预期视在功率 S:</span><span class="res-val" id="t2_s">-- kVA</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+function switchTab(index) {
+  var btns = document.querySelectorAll('.tab-btn');
+  var contents = document.querySelectorAll('.tab-content');
+  for (var i = 0; i < btns.length; i++) {
+    btns[i].classList.remove('active');
+    contents[i].classList.remove('active');
+  }
+  btns[index].classList.add('active');
+  contents[index].classList.add('active');
+}
+
+function calcTab0() {
+  var err = document.getElementById('t0_err');
+  err.style.display = 'none';
+  var u = parseFloat(document.getElementById('t0_u').value);
+  var i = parseFloat(document.getElementById('t0_i').value);
+  var pf = parseFloat(document.getElementById('t0_pf').value);
+  var f = parseFloat(document.getElementById('t0_f').value);
+
+if (isNaN(u) - u <= 0 - isNaN(i) - i <= 0) {
+    showError('t0_err', '请输入有效的正数电压和电流');
+    return;
+  }
+if (isNaN(pf) - pf < 0 - pf > 1) {
+    showError('t0_err', '功率因数必须在 0 到 1 之间');
+    return;
+  }
+
+  var z = u / i;
+  var r = z * pf;
+  var sinPhi = Math.sqrt(Math.max(0, 1 - pf * pf));
+  var xl = z * sinPhi;
+  var l = (xl / (2 * Math.PI * f)) * 1000;
+  var p = (u * i * pf) / 1000;
+  var q = (u * i * sinPhi) / 1000;
+
+  document.getElementById('t0_resZ').innerText = z.toFixed(3) + ' Ω';
+  document.getElementById('t0_resR').innerText = r.toFixed(3) + ' Ω';
+  document.getElementById('t0_resXL').innerText = xl.toFixed(3) + ' Ω';
+  document.getElementById('t0_resL').innerText = l.toFixed(2) + ' mH';
+  document.getElementById('t0_resP').innerText = p.toFixed(3) + ' kW';
+  document.getElementById('t0_resQ').innerText = q.toFixed(3) + ' kvar';
+
+  document.getElementById('t1targeti').value = i;
+  document.getElementById('t1targetpf').value = pf;
+}
+
+function calcTab1() {
+  var err = document.getElementById('t1_err');
+  err.style.display = 'none';
+  var targetI = parseFloat(document.getElementById('t1targeti').value);
+  var targetPf = parseFloat(document.getElementById('t1targetpf').value);
+  var actU = parseFloat(document.getElementById('t1actu').value);
+  var actI = parseFloat(document.getElementById('t1acti').value);
+  var actPf = parseFloat(document.getElementById('t1actpf').value);
+  var f = parseFloat(document.getElementById('t1_f').value);
+
+if (isNaN(targetI) - targetI <= 0 - isNaN(targetPf) - targetPf < 0 - targetPf > 1) {
+    showError('t1_err', '请检查目标电流和目标功率因数');
+    return;
+  }
+if (isNaN(actU) - actU <= 0 - isNaN(actI) - actI <= 0 - isNaN(actPf) - actPf < 0 - actPf > 1) {
+    showError('t1_err', '请检查实测电压、电流和功率因数');
+    return;
+  }
+
+  var targetZ = actU / targetI;
+  var targetR = targetZ * targetPf;
+  var targetSin = Math.sqrt(Math.max(0, 1 - targetPf * targetPf));
+  var targetXl = targetZ * targetSin;
+  var targetL = (targetXl / (2 * Math.PI * f)) * 1000;
+
+  var actZ = actU / actI;
+  var actR = actZ * actPf;
+  var actSin = Math.sqrt(Math.max(0, 1 - actPf * actPf));
+  var actXl = actZ * actSin;
+  var actL = (actXl / (2 * Math.PI * f)) * 1000;
+
+  var deltaR = targetR - actR;
+  var deltaL = targetL - actL;
+
+  document.getElementById('t1_actZ').innerText = actZ.toFixed(3) + ' Ω';
+  document.getElementById('t1_actR').innerText = actR.toFixed(3) + ' Ω (目标: ' + targetR.toFixed(3) + ' Ω)';
+  document.getElementById('t1_actL').innerText = actL.toFixed(2) + ' mH (目标: ' + targetL.toFixed(2) + ' mH)';
+
+  var strR = (deltaR >= 0 ? '+' : '') + deltaR.toFixed(3) + ' Ω';
+  var strL = (deltaL >= 0 ? '+' : '') + deltaL.toFixed(2) + ' mH';
+  document.getElementById('t1_deltaR').innerText = strR;
+  document.getElementById('t1_deltaL').innerText = strL;
+
+  var advice = '调节建议：';
+  if (Math.abs(deltaR) < 0.01 && Math.abs(deltaL) < 0.05) {
+    advice += '当前实测波形与理论目标吻合良好，无需大幅调整。';
+  } else {
+    advice += (deltaR > 0 ? '需增加电阻 ' + deltaR.toFixed(3) + ' Ω；' : '需减少电阻 ' + Math.abs(deltaR).toFixed(3) + ' Ω；');
+    advice += (deltaL > 0 ? '需增加电感 ' + deltaL.toFixed(2) + ' mH。' : '需减少电感 ' + Math.abs(deltaL).toFixed(2) + ' mH。');
+  }
+  document.getElementById('t1_advice').innerText = advice;
+}
+
+function calcTab2() {
+  var err = document.getElementById('t2_err');
+  err.style.display = 'none';
+  var u = parseFloat(document.getElementById('t2_u').value);
+  var f = parseFloat(document.getElementById('t2_f').value);
+  var r = parseFloat(document.getElementById('t2_r').value);
+  var l = parseFloat(document.getElementById('t2_l').value);
+
+if (isNaN(u) - u <= 0 - isNaN(r) - r < 0 - isNaN(l) - l < 0) {
+    showError('t2_err', '请输入有效的试验电压、电阻和电感');
+    return;
+  }
+
+  var xl = 2 * Math.PI * f * (l / 1000);
+  var z = Math.sqrt(r * r + xl * xl);
+  if (z <= 0) {
+    showError('t2_err', '总阻抗不能为0');
+    return;
+  }
+  var i = u / z;
+  var pf = r / z;
+  var p = (u * i * pf) / 1000;
+  var s = (u * i) / 1000;
+
+  document.getElementById('t2_xl').innerText = xl.toFixed(3) + ' Ω';
+  document.getElementById('t2_z').innerText = z.toFixed(3) + ' Ω';
+  document.getElementById('t2_i').innerText = i.toFixed(2) + ' A';
+  document.getElementById('t2_pf').innerText = pf.toFixed(3);
+  document.getElementById('t2_p').innerText = p.toFixed(3) + ' kW';
+  document.getElementById('t2_s').innerText = s.toFixed(3) + ' kVA';
+}
+
+function showError(elemId, msg) {
+  var el = document.getElementById(elemId);
+  el.innerText = msg;
+  el.style.display = 'block';
+}
+
+window.onload = function() {
+  calcTab0();
+  calcTab1();
+  calcTab2();
+};
+</script>
+</body>
+</html>
