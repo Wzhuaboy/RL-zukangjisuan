@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RL交流参数计算器</title>
+<style>
+- { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif; background: #f0f2f5; padding: 16px; color: #333; }
+.card { max-width: 480px; margin: 0 auto; background: #ffffff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); padding: 20px; }
+h2 { font-size: 20px; text-align: center; margin-bottom: 20px; color: #1a1a1a; }
+.form-group { margin-bottom: 14px; }
+label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; color: #444; }
+input, select { width: 100%; height: 44px; padding: 0 12px; font-size: 16px; border: 1px solid #dcdfe6; border-radius: 8px; background: #fff; }
+input:focus, select:focus { border-color: #007aff; outline: none; }
+.btn-group { display: flex; gap: 10px; margin-top: 20px; }
+button { flex: 1; height: 44px; font-size: 16px; font-weight: 600; border: none; border-radius: 8px; cursor: pointer; }
+.btn-calc { background: #007aff; color: #fff; }
+.btn-reset { background: #e5e5ea; color: #333; }
+.res-box { margin-top: 24px; padding-top: 16px; border-top: 1px solid #eee; }
+.res-title { font-size: 16px; font-weight: 600; margin-bottom: 12px; color: #007aff; }
+.res-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #f0f0f0; font-size: 15px; }
+.res-val { font-weight: 600; color: #1a1a1a; }
+.err-msg { color: #ff3b30; font-size: 14px; margin-top: 10px; text-align: center; display: none; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h2>RL交流电路参数计算器</h2>
+
+  <div class="form-group">
+    <label>交流电压 U (V)</label>
+    <input type="number" id="voltage" step="any" value="252" placeholder="例如: 252">
+  </div>
+
+  <div class="form-group">
+    <label>交流电流 I (A)</label>
+    <input type="number" id="current" step="any" value="32" placeholder="例如: 32">
+  </div>
+
+  <div class="form-group">
+    <label>功率因数 cosφ (0 ~ 1)</label>
+    <input type="number" id="pf" step="any" value="0.77" min="0" max="1" placeholder="例如: 0.77">
+  </div>
+
+  <div class="form-group">
+    <label>电源频率 f (Hz)</label>
+    <select id="freq">
+      <option value="50" selected>50 Hz</option>
+      <option value="60">60 Hz</option>
+    </select>
+  </div>
+
+  <div class="btn-group">
+    <button type="button" class="btn-calc" onclick="doCalc()">计算参数</button>
+    <button type="button" class="btn-reset" onclick="doReset()">重置</button>
+  </div>
+
+  <div id="errMsg" class="err-msg"></div>
+
+  <div class="res-box">
+    <div class="res-title">计算结果</div>
+    <div class="res-row"><span>总阻抗 Z:</span><span class="res-val" id="resZ">-- Ω</span></div>
+    <div class="res-row"><span>电阻 R:</span><span class="res-val" id="resR">-- Ω</span></div>
+    <div class="res-row"><span>感抗 XL:</span><span class="res-val" id="resXL">-- Ω</span></div>
+    <div class="res-row"><span>电感 L:</span><span class="res-val" id="resL">-- mH</span></div>
+    <div class="res-row"><span>有功功率 P:</span><span class="res-val" id="resP">-- kW</span></div>
+    <div class="res-row"><span>无功功率 Q:</span><span class="res-val" id="resQ">-- kvar</span></div>
+    <div class="res-row"><span>视在功率 S:</span><span class="res-val" id="resS">-- kVA</span></div>
+  </div>
+</div>
+
+<script>
+function doCalc() {
+  var err = document.getElementById('errMsg');
+  err.style.display = 'none';
+  err.innerText = '';
+
+  var u = parseFloat(document.getElementById('voltage').value);
+  var i = parseFloat(document.getElementById('current').value);
+  var pf = parseFloat(document.getElementById('pf').value);
+  var f = parseFloat(document.getElementById('freq').value);
+
+if (isNaN(u) - u <= 0 - isNaN(i) - i <= 0) {
+    showErr('请输入有效的正数电压和电流');
+    return;
+  }
+if (isNaN(pf) - pf < 0 - pf > 1) {
+    showErr('功率因数必须在 0 到 1 之间');
+    return;
+  }
+
+  var z = u / i;
+  var r = z * pf;
+  var sinPhi = Math.sqrt(Math.max(0, 1 - pf * pf));
+  var xl = z * sinPhi;
+  var l = (xl / (2 * Math.PI * f)) * 1000;
+  var p = (u * i * pf) / 1000;
+  var q = (u * i * sinPhi) / 1000;
+  var s = (u * i) / 1000;
+
+  document.getElementById('resZ').innerText = z.toFixed(3) + ' Ω';
+  document.getElementById('resR').innerText = r.toFixed(3) + ' Ω';
+  document.getElementById('resXL').innerText = xl.toFixed(3) + ' Ω';
+  document.getElementById('resL').innerText = l.toFixed(2) + ' mH';
+  document.getElementById('resP').innerText = p.toFixed(3) + ' kW';
+  document.getElementById('resQ').innerText = q.toFixed(3) + ' kvar';
+  document.getElementById('resS').innerText = s.toFixed(3) + ' kVA';
+}
+
+function showErr(msg) {
+  var err = document.getElementById('errMsg');
+  err.innerText = msg;
+  err.style.display = 'block';
+}
+
+function doReset() {
+  document.getElementById('voltage').value = '';
+  document.getElementById('current').value = '';
+  document.getElementById('pf').value = '';
+  document.getElementById('freq').value = '50';
+  document.getElementById('errMsg').style.display = 'none';
+
+  document.getElementById('resZ').innerText = '-- Ω';
+  document.getElementById('resR').innerText = '-- Ω';
+  document.getElementById('resXL').innerText = '-- Ω';
+  document.getElementById('resL').innerText = '-- mH';
+  document.getElementById('resP').innerText = '-- kW';
+  document.getElementById('resQ').innerText = '-- kvar';
+  document.getElementById('resS').innerText = '-- kVA';
+}
+
+window.onload = function() {
+  doCalc();
+};
+</script>
+</body>
+</html>
