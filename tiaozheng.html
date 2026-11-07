@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RL交流阻抗与试验波形校准计算器</title>
 <style>
-- { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif; background: #f0f2f5; padding: 12px; color: #333; }
 .card { max-width: 520px; margin: 0 auto; background: #ffffff; border-radius: 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.08); padding: 18px; }
 h2 { font-size: 19px; text-align: center; margin-bottom: 16px; color: #1a1a1a; }
@@ -28,6 +28,16 @@ button.btn-sub { flex: 1; height: 42px; font-size: 15px; font-weight: 600; borde
 .res-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px dashed #f0f0f0; font-size: 14px; }
 .res-val { font-weight: 600; color: #1a1a1a; }
 .res-highlight { color: #ff3b30; font-weight: 700; }
+.key-box { border: 2px solid #007aff; background: #f2f7ff; border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; }
+.key-box-red { border-color: #ff3b30; background: #fff2f2; }
+.key-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; font-size: 16px; font-weight: 600; }
+.key-row + .key-row { border-top: 1px dashed #cfe2ff; }
+.key-box-red .key-row + .key-row { border-top-color: #ffd1d1; }
+.key-val { font-weight: 700; color: #007aff; font-size: 18px; }
+.key-val-red { font-weight: 700; color: #ff3b30; font-size: 18px; }
+.key-label { font-size: 13px; font-weight: 700; color: #007aff; margin-bottom: 6px; }
+.key-box-red .key-label { color: #ff3b30; }
+.freq-fixed { width: 100%; height: 42px; line-height: 42px; padding: 0 10px; font-size: 15px; color: #666; border: 1px solid #dcdfe6; border-radius: 8px; background: #f5f5f7; }
 .res-good { color: #34c759; font-weight: 700; }
 .err-msg { color: #ff3b30; font-size: 13px; margin-top: 8px; text-align: center; display: none; }
 .tip-box { background: #f2f7ff; border-left: 4px solid #007aff; padding: 10px; border-radius: 4px; font-size: 12px; color: #555; margin-bottom: 14px; line-height: 1.5; }
@@ -62,10 +72,7 @@ button.btn-sub { flex: 1; height: 42px; font-size: 15px; font-weight: 600; borde
       </div>
       <div class="form-group">
         <label>电源频率 (Hz)</label>
-        <select id="t0_f">
-          <option value="50" selected>50 Hz</option>
-          <option value="60">60 Hz</option>
-        </select>
+        <div class="freq-fixed">50 Hz（固定）</div>
       </div>
     </div>
     <div class="btn-group">
@@ -74,10 +81,13 @@ button.btn-sub { flex: 1; height: 42px; font-size: 15px; font-weight: 600; borde
     <div id="t0_err" class="err-msg"></div>
     <div class="res-box">
       <div class="res-title">理论需求参数</div>
+      <div class="key-box">
+        <div class="key-label">按此配置电阻和电感</div>
+        <div class="key-row"><span>理论电阻 R:</span><span class="key-val" id="t0_resR">-- Ω</span></div>
+        <div class="key-row"><span>理论电感 L:</span><span class="key-val" id="t0_resL">-- mH</span></div>
+      </div>
       <div class="res-row"><span>总阻抗 Z:</span><span class="res-val" id="t0_resZ">-- Ω</span></div>
-      <div class="res-row"><span>理论电阻 R:</span><span class="res-val" id="t0_resR">-- Ω</span></div>
       <div class="res-row"><span>理论感抗 XL:</span><span class="res-val" id="t0_resXL">-- Ω</span></div>
-      <div class="res-row"><span>理论电感 L:</span><span class="res-val res-highlight" id="t0_resL">-- mH</span></div>
       <div class="res-row"><span>有功功率 P:</span><span class="res-val" id="t0_resP">-- kW</span></div>
       <div class="res-row"><span>无功功率 Q:</span><span class="res-val" id="t0_resQ">-- kvar</span></div>
     </div>
@@ -114,10 +124,7 @@ button.btn-sub { flex: 1; height: 42px; font-size: 15px; font-weight: 600; borde
       </div>
       <div class="form-group">
         <label>电源频率 (Hz)</label>
-        <select id="t1_f">
-          <option value="50" selected>50 Hz</option>
-          <option value="60">60 Hz</option>
-        </select>
+        <div class="freq-fixed">50 Hz（固定）</div>
       </div>
     </div>
     <div class="btn-group">
@@ -126,12 +133,17 @@ button.btn-sub { flex: 1; height: 42px; font-size: 15px; font-weight: 600; borde
     <div id="t1_err" class="err-msg"></div>
     <div class="res-box">
       <div class="res-title">实测回路参数 vs 目标偏差</div>
+      <div class="key-box">
+        <div class="key-label">实测电阻 / 电感</div>
+        <div class="key-row"><span>实测电阻 R实测:</span><span class="key-val" id="t1actR">-- Ω</span></div>
+        <div class="key-row"><span>实测电感 L实测:</span><span class="key-val" id="t1actL">-- mH</span></div>
+      </div>
+      <div class="key-box key-box-red">
+        <div class="key-label">需要调整（按此调电阻和电感）</div>
+        <div class="key-row"><span>电阻调整量 (ΔR):</span><span class="key-val-red" id="t1_deltaR">-- Ω</span></div>
+        <div class="key-row"><span>电感调整量 (ΔL):</span><span class="key-val-red" id="t1_deltaL">-- mH</span></div>
+      </div>
       <div class="res-row"><span>实测总阻抗 Z实测:</span><span class="res-val" id="t1actZ">-- Ω</span></div>
-      <div class="res-row"><span>实测电阻 R实测:</span><span class="res-val" id="t1actR">-- Ω</span></div>
-      <div class="res-row"><span>实测电感 L实测:</span><span class="res-val" id="t1actL">-- mH</span></div>
-      <div class="res-title" style="margin-top:12px; color:#ff3b30;">建议设备调节方案</div>
-      <div class="res-row"><span>电阻调整量 (ΔR):</span><span class="res-val res-highlight" id="t1_deltaR">-- Ω</span></div>
-      <div class="res-row"><span>电感调整量 (ΔL):</span><span class="res-val res-highlight" id="t1_deltaL">-- mH</span></div>
       <div class="tip-box" id="t1_advice" style="margin-top:10px; margin-bottom:0;">点击上方计算获取调节建议</div>
     </div>
   </div>
@@ -145,10 +157,7 @@ button.btn-sub { flex: 1; height: 42px; font-size: 15px; font-weight: 600; borde
       </div>
       <div class="form-group">
         <label>电源频率 (Hz)</label>
-        <select id="t2_f">
-          <option value="50" selected>50 Hz</option>
-          <option value="60">60 Hz</option>
-        </select>
+        <div class="freq-fixed">50 Hz（固定）</div>
       </div>
     </div>
     <div class="row-2">
@@ -167,6 +176,11 @@ button.btn-sub { flex: 1; height: 42px; font-size: 15px; font-weight: 600; borde
     <div id="t2_err" class="err-msg"></div>
     <div class="res-box">
       <div class="res-title">预期波形参数</div>
+      <div class="key-box">
+        <div class="key-label">当前已接电阻 / 电感</div>
+        <div class="key-row"><span>接入电阻 R:</span><span class="key-val" id="t2_showR">-- Ω</span></div>
+        <div class="key-row"><span>接入电感 L:</span><span class="key-val" id="t2_showL">-- mH</span></div>
+      </div>
       <div class="res-row"><span>回路感抗 XL:</span><span class="res-val" id="t2_xl">-- Ω</span></div>
       <div class="res-row"><span>回路总阻抗 Z:</span><span class="res-val" id="t2_z">-- Ω</span></div>
       <div class="res-row"><span>预期电流 I:</span><span class="res-val res-good" id="t2_i">-- A</span></div>
@@ -195,13 +209,13 @@ function calcTab0() {
   var u = parseFloat(document.getElementById('t0_u').value);
   var i = parseFloat(document.getElementById('t0_i').value);
   var pf = parseFloat(document.getElementById('t0_pf').value);
-  var f = parseFloat(document.getElementById('t0_f').value);
+  var f = 50;
 
-if (isNaN(u) - u <= 0 - isNaN(i) - i <= 0) {
+if (isNaN(u) || u <= 0 || isNaN(i) || i <= 0) {
     showError('t0_err', '请输入有效的正数电压和电流');
     return;
   }
-if (isNaN(pf) - pf < 0 - pf > 1) {
+if (isNaN(pf) || pf < 0 || pf > 1) {
     showError('t0_err', '功率因数必须在 0 到 1 之间');
     return;
   }
@@ -214,10 +228,10 @@ if (isNaN(pf) - pf < 0 - pf > 1) {
   var p = (u * i * pf) / 1000;
   var q = (u * i * sinPhi) / 1000;
 
-  document.getElementById('t0_resZ').innerText = z.toFixed(3) + ' Ω';
-  document.getElementById('t0_resR').innerText = r.toFixed(3) + ' Ω';
-  document.getElementById('t0_resXL').innerText = xl.toFixed(3) + ' Ω';
-  document.getElementById('t0_resL').innerText = l.toFixed(2) + ' mH';
+  document.getElementById('t0_resZ').innerText = z.toFixed(4) + ' Ω';
+  document.getElementById('t0_resR').innerText = r.toFixed(4) + ' Ω';
+  document.getElementById('t0_resXL').innerText = xl.toFixed(4) + ' Ω';
+  document.getElementById('t0_resL').innerText = l.toFixed(3) + ' mH';
   document.getElementById('t0_resP').innerText = p.toFixed(3) + ' kW';
   document.getElementById('t0_resQ').innerText = q.toFixed(3) + ' kvar';
 
@@ -233,13 +247,13 @@ function calcTab1() {
   var actU = parseFloat(document.getElementById('t1actu').value);
   var actI = parseFloat(document.getElementById('t1acti').value);
   var actPf = parseFloat(document.getElementById('t1actpf').value);
-  var f = parseFloat(document.getElementById('t1_f').value);
+  var f = 50;
 
-if (isNaN(targetI) - targetI <= 0 - isNaN(targetPf) - targetPf < 0 - targetPf > 1) {
+if (isNaN(targetI) || targetI <= 0 || isNaN(targetPf) || targetPf < 0 || targetPf > 1) {
     showError('t1_err', '请检查目标电流和目标功率因数');
     return;
   }
-if (isNaN(actU) - actU <= 0 - isNaN(actI) - actI <= 0 - isNaN(actPf) - actPf < 0 - actPf > 1) {
+if (isNaN(actU) || actU <= 0 || isNaN(actI) || actI <= 0 || isNaN(actPf) || actPf < 0 || actPf > 1) {
     showError('t1_err', '请检查实测电压、电流和功率因数');
     return;
   }
@@ -259,12 +273,12 @@ if (isNaN(actU) - actU <= 0 - isNaN(actI) - actI <= 0 - isNaN(actPf) - actPf < 0
   var deltaR = targetR - actR;
   var deltaL = targetL - actL;
 
-  document.getElementById('t1_actZ').innerText = actZ.toFixed(3) + ' Ω';
-  document.getElementById('t1_actR').innerText = actR.toFixed(3) + ' Ω (目标: ' + targetR.toFixed(3) + ' Ω)';
-  document.getElementById('t1_actL').innerText = actL.toFixed(2) + ' mH (目标: ' + targetL.toFixed(2) + ' mH)';
+  document.getElementById('t1_actZ').innerText = actZ.toFixed(4) + ' Ω';
+  document.getElementById('t1_actR').innerText = actR.toFixed(4) + ' Ω (目标: ' + targetR.toFixed(4) + ' Ω)';
+  document.getElementById('t1_actL').innerText = actL.toFixed(3) + ' mH (目标: ' + targetL.toFixed(3) + ' mH)';
 
-  var strR = (deltaR >= 0 ? '+' : '') + deltaR.toFixed(3) + ' Ω';
-  var strL = (deltaL >= 0 ? '+' : '') + deltaL.toFixed(2) + ' mH';
+  var strR = (deltaR >= 0 ? '+' : '') + deltaR.toFixed(4) + ' Ω';
+  var strL = (deltaL >= 0 ? '+' : '') + deltaL.toFixed(3) + ' mH';
   document.getElementById('t1_deltaR').innerText = strR;
   document.getElementById('t1_deltaL').innerText = strL;
 
@@ -272,8 +286,8 @@ if (isNaN(actU) - actU <= 0 - isNaN(actI) - actI <= 0 - isNaN(actPf) - actPf < 0
   if (Math.abs(deltaR) < 0.01 && Math.abs(deltaL) < 0.05) {
     advice += '当前实测波形与理论目标吻合良好，无需大幅调整。';
   } else {
-    advice += (deltaR > 0 ? '需增加电阻 ' + deltaR.toFixed(3) + ' Ω；' : '需减少电阻 ' + Math.abs(deltaR).toFixed(3) + ' Ω；');
-    advice += (deltaL > 0 ? '需增加电感 ' + deltaL.toFixed(2) + ' mH。' : '需减少电感 ' + Math.abs(deltaL).toFixed(2) + ' mH。');
+    advice += (deltaR > 0 ? '需增加电阻 ' + deltaR.toFixed(4) + ' Ω；' : '需减少电阻 ' + Math.abs(deltaR).toFixed(4) + ' Ω；');
+    advice += (deltaL > 0 ? '需增加电感 ' + deltaL.toFixed(3) + ' mH。' : '需减少电感 ' + Math.abs(deltaL).toFixed(3) + ' mH。');
   }
   document.getElementById('t1_advice').innerText = advice;
 }
@@ -282,11 +296,11 @@ function calcTab2() {
   var err = document.getElementById('t2_err');
   err.style.display = 'none';
   var u = parseFloat(document.getElementById('t2_u').value);
-  var f = parseFloat(document.getElementById('t2_f').value);
+  var f = 50;
   var r = parseFloat(document.getElementById('t2_r').value);
   var l = parseFloat(document.getElementById('t2_l').value);
 
-if (isNaN(u) - u <= 0 - isNaN(r) - r < 0 - isNaN(l) - l < 0) {
+if (isNaN(u) || u <= 0 || isNaN(r) || r < 0 || isNaN(l) || l < 0) {
     showError('t2_err', '请输入有效的试验电压、电阻和电感');
     return;
   }
@@ -302,8 +316,10 @@ if (isNaN(u) - u <= 0 - isNaN(r) - r < 0 - isNaN(l) - l < 0) {
   var p = (u * i * pf) / 1000;
   var s = (u * i) / 1000;
 
-  document.getElementById('t2_xl').innerText = xl.toFixed(3) + ' Ω';
-  document.getElementById('t2_z').innerText = z.toFixed(3) + ' Ω';
+  document.getElementById('t2_showR').innerText = r.toFixed(4) + ' Ω';
+  document.getElementById('t2_showL').innerText = l.toFixed(3) + ' mH';
+  document.getElementById('t2_xl').innerText = xl.toFixed(4) + ' Ω';
+  document.getElementById('t2_z').innerText = z.toFixed(4) + ' Ω';
   document.getElementById('t2_i').innerText = i.toFixed(2) + ' A';
   document.getElementById('t2_pf').innerText = pf.toFixed(3);
   document.getElementById('t2_p').innerText = p.toFixed(3) + ' kW';

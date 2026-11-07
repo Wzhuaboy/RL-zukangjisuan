@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RL交流参数计算器</title>
 <style>
-- { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif; background: #f0f2f5; padding: 16px; color: #333; }
 .card { max-width: 480px; margin: 0 auto; background: #ffffff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); padding: 20px; }
 h2 { font-size: 20px; text-align: center; margin-bottom: 20px; color: #1a1a1a; }
@@ -21,6 +21,11 @@ button { flex: 1; height: 44px; font-size: 16px; font-weight: 600; border: none;
 .res-title { font-size: 16px; font-weight: 600; margin-bottom: 12px; color: #007aff; }
 .res-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #f0f0f0; font-size: 15px; }
 .res-val { font-weight: 600; color: #1a1a1a; }
+.key-box { border: 2px solid #007aff; background: #f2f7ff; border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; }
+.key-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; font-size: 17px; font-weight: 600; }
+.key-row + .key-row { border-top: 1px dashed #cfe2ff; }
+.key-val { font-weight: 700; color: #007aff; font-size: 19px; }
+.freq-fixed { width: 100%; height: 44px; line-height: 44px; padding: 0 12px; font-size: 16px; color: #666; border: 1px solid #dcdfe6; border-radius: 8px; background: #f5f5f7; }
 .err-msg { color: #ff3b30; font-size: 14px; margin-top: 10px; text-align: center; display: none; }
 </style>
 </head>
@@ -45,10 +50,7 @@ button { flex: 1; height: 44px; font-size: 16px; font-weight: 600; border: none;
 
   <div class="form-group">
     <label>电源频率 f (Hz)</label>
-    <select id="freq">
-      <option value="50" selected>50 Hz</option>
-      <option value="60">60 Hz</option>
-    </select>
+    <div class="freq-fixed">50 Hz（固定）</div>
   </div>
 
   <div class="btn-group">
@@ -60,10 +62,12 @@ button { flex: 1; height: 44px; font-size: 16px; font-weight: 600; border: none;
 
   <div class="res-box">
     <div class="res-title">计算结果</div>
+    <div class="key-box">
+      <div class="key-row"><span>电阻 R:</span><span class="key-val" id="resR">-- Ω</span></div>
+      <div class="key-row"><span>电感 L:</span><span class="key-val" id="resL">-- mH</span></div>
+    </div>
     <div class="res-row"><span>总阻抗 Z:</span><span class="res-val" id="resZ">-- Ω</span></div>
-    <div class="res-row"><span>电阻 R:</span><span class="res-val" id="resR">-- Ω</span></div>
     <div class="res-row"><span>感抗 XL:</span><span class="res-val" id="resXL">-- Ω</span></div>
-    <div class="res-row"><span>电感 L:</span><span class="res-val" id="resL">-- mH</span></div>
     <div class="res-row"><span>有功功率 P:</span><span class="res-val" id="resP">-- kW</span></div>
     <div class="res-row"><span>无功功率 Q:</span><span class="res-val" id="resQ">-- kvar</span></div>
     <div class="res-row"><span>视在功率 S:</span><span class="res-val" id="resS">-- kVA</span></div>
@@ -79,13 +83,13 @@ function doCalc() {
   var u = parseFloat(document.getElementById('voltage').value);
   var i = parseFloat(document.getElementById('current').value);
   var pf = parseFloat(document.getElementById('pf').value);
-  var f = parseFloat(document.getElementById('freq').value);
+  var f = 50;
 
-if (isNaN(u) - u <= 0 - isNaN(i) - i <= 0) {
+if (isNaN(u) || u <= 0 || isNaN(i) || i <= 0) {
     showErr('请输入有效的正数电压和电流');
     return;
   }
-if (isNaN(pf) - pf < 0 - pf > 1) {
+if (isNaN(pf) || pf < 0 || pf > 1) {
     showErr('功率因数必须在 0 到 1 之间');
     return;
   }
@@ -99,10 +103,10 @@ if (isNaN(pf) - pf < 0 - pf > 1) {
   var q = (u * i * sinPhi) / 1000;
   var s = (u * i) / 1000;
 
-  document.getElementById('resZ').innerText = z.toFixed(3) + ' Ω';
-  document.getElementById('resR').innerText = r.toFixed(3) + ' Ω';
-  document.getElementById('resXL').innerText = xl.toFixed(3) + ' Ω';
-  document.getElementById('resL').innerText = l.toFixed(2) + ' mH';
+  document.getElementById('resZ').innerText = z.toFixed(4) + ' Ω';
+  document.getElementById('resR').innerText = r.toFixed(4) + ' Ω';
+  document.getElementById('resXL').innerText = xl.toFixed(4) + ' Ω';
+  document.getElementById('resL').innerText = l.toFixed(3) + ' mH';
   document.getElementById('resP').innerText = p.toFixed(3) + ' kW';
   document.getElementById('resQ').innerText = q.toFixed(3) + ' kvar';
   document.getElementById('resS').innerText = s.toFixed(3) + ' kVA';
@@ -118,7 +122,6 @@ function doReset() {
   document.getElementById('voltage').value = '';
   document.getElementById('current').value = '';
   document.getElementById('pf').value = '';
-  document.getElementById('freq').value = '50';
   document.getElementById('errMsg').style.display = 'none';
 
   document.getElementById('resZ').innerText = '-- Ω';
