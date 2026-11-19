@@ -71,11 +71,20 @@
   .field input,.field select,.field textarea{width:100%}
   .field .unit-note{font-size:12px;color:var(--muted);margin-top:3px}
 
-  .gear-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:10px}
-  .gear{background:var(--surface2);border-radius:8px;padding:10px}
-  .gear label{display:block;font-size:13px;font-weight:700;margin-bottom:5px}
-  .gear select{width:100%}
-  .gear .val{font-size:12px;color:var(--muted);margin-top:5px;font-family:var(--mono)}
+  .gear-list{display:flex;flex-direction:column;gap:12px}
+  .gear{background:var(--surface2);border-radius:8px;padding:10px 12px}
+  .gear-name{font-size:13.5px;font-weight:700;margin-bottom:8px}
+  .btn-group{display:flex;flex-wrap:wrap;gap:6px}
+  .opt-btn{background:var(--surface);border:1.5px solid var(--line);border-radius:7px;padding:6px 10px;min-height:46px;min-width:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;color:var(--ink)}
+  .opt-btn .b-main{font-size:14.5px;font-weight:600;line-height:1.25}
+  .opt-btn .b-val{font-size:11px;color:var(--muted);font-family:var(--mono);line-height:1.25}
+  .opt-btn.sel{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+  .opt-btn.sel .b-main{font-weight:800}
+  .opt-btn.sel .b-val{color:var(--accent-ink);opacity:.85}
+  .opt-btn:active{opacity:.85}
+  .seg{display:flex;flex-wrap:wrap;gap:6px}
+  .seg .opt-btn{flex-direction:row;min-width:0;min-height:38px;padding:6px 14px;font-size:14px;font-weight:600}
+  .seg .opt-btn.sel{font-weight:800}
 
   .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:10px;margin-top:12px}
   .stat{background:var(--surface2);border-radius:8px;padding:10px 12px}
@@ -156,11 +165,11 @@
           <input type="number" id="tU" inputmode="decimal" step="any" min="0" placeholder="如 400" />
         </div>
         <div class="field">
-          <label for="tUType">电压类型</label>
-          <select id="tUType">
-            <option value="phase">相电压（直接用）</option>
-            <option value="line">线电压（先 ÷√3 换成相电压）</option>
-          </select>
+          <label>电压类型</label>
+          <div class="seg" id="tUType" role="group" aria-label="目标电压类型">
+            <button type="button" class="opt-btn sel" data-val="phase">相电压（直接用）</button>
+            <button type="button" class="opt-btn" data-val="line">线电压（÷√3）</button>
+          </div>
           <div class="unit-note" id="tUConv"></div>
         </div>
         <div class="field">
@@ -194,9 +203,9 @@
   <section class="tab" id="tab-gear">
     <div class="card">
       <h2>电阻档位（五组并联，总电导相加）</h2>
-      <div class="gear-grid" id="rGears"></div>
+      <div class="gear-list" id="rGears"></div>
       <h2 style="margin-top:22px">电感档位（1L~6L 串联，电抗相加）</h2>
-      <div class="gear-grid" id="lGears"></div>
+      <div class="gear-list" id="lGears"></div>
       <div class="stats" id="theoryStats"></div>
       <p class="hint">理论值按铭牌公式算：电阻五组并联取倒数，电感六组查表相加。Rf 不计入理论值（见铭牌数据页），它和接触、引线等偏差一起，靠下面的实测记录来校准。</p>
     </div>
@@ -209,11 +218,11 @@
           <input type="number" id="mU" inputmode="decimal" step="any" min="0" placeholder="如 400" />
         </div>
         <div class="field">
-          <label for="mUType">电压类型</label>
-          <select id="mUType">
-            <option value="phase">相电压（直接用）</option>
-            <option value="line">线电压（先 ÷√3 换成相电压）</option>
-          </select>
+          <label>电压类型</label>
+          <div class="seg" id="mUType" role="group" aria-label="实测电压类型">
+            <button type="button" class="opt-btn sel" data-val="phase">相电压（直接用）</button>
+            <button type="button" class="opt-btn" data-val="line">线电压（÷√3）</button>
+          </div>
           <div class="unit-note" id="mUConv"></div>
         </div>
         <div class="field">
@@ -225,13 +234,13 @@
           <input type="number" id="mPf" inputmode="decimal" step="any" min="0" max="1" placeholder="如 0.82" />
         </div>
         <div class="field">
-          <label for="mPhase">相别（仅备注，三相档位相同）</label>
-          <select id="mPhase">
-            <option value="A">A 相</option>
-            <option value="B">B 相</option>
-            <option value="C">C 相</option>
-            <option value="">不注明</option>
-          </select>
+          <label>相别（仅备注，三相档位相同）</label>
+          <div class="seg" id="mPhase" role="group" aria-label="相别">
+            <button type="button" class="opt-btn sel" data-val="A">A 相</button>
+            <button type="button" class="opt-btn" data-val="B">B 相</button>
+            <button type="button" class="opt-btn" data-val="C">C 相</button>
+            <button type="button" class="opt-btn" data-val="">不注明</button>
+          </div>
         </div>
         <div class="field">
           <label for="mNote">备注</label>
@@ -416,38 +425,57 @@ tabBtns.forEach(function(btn){
   });
 });
 
-/* ================= ② 档位选择器 ================= */
+/* ================= ② 档位按钮组 ================= */
 var gearState = { r1: 8, r2: 0, r3: 0, r4: 0, r5: 0, L1: 0, L2: 0, L3: 0, L4: 0, L5: 0, L6: 0 };
-function gearLabelR(key, v){
-  if (key === "r1") return "R = " + fmt(R1_TABLE[v-1]) + " Ω";
-  if (key === "r2") return v === 1 ? "R = 0.0338 Ω" : "断开";
-  var n = v; return n === 0 ? "断开" : ("R = " + fmt(BRANCH[key] / n) + " Ω");
+var tUTypeVal = "phase", mUTypeVal = "phase", mPhaseVal = "A";
+function gearBtnValR(key, v){
+  if (key === "r1") return fmt(R1_TABLE[v-1]) + " Ω";
+  if (key === "r2") return v === 1 ? "0.0338 Ω" : "断开";
+  return v === 0 ? "断开" : fmt(BRANCH[key] / v) + " Ω";
+}
+function buildGearGroup(box, def){
+  var div = document.createElement("div"); div.className = "gear";
+  var name = document.createElement("div"); name.className = "gear-name"; name.textContent = def.name;
+  var grp = document.createElement("div"); grp.className = "btn-group"; grp.setAttribute("role", "group"); grp.setAttribute("aria-label", def.name);
+  def.opts.forEach(function(v){
+    var b = document.createElement("button"); b.type = "button";
+    b.className = "opt-btn" + (gearState[def.key] === v ? " sel" : "");
+    b.innerHTML = '<span class="b-main">' + def.label(v) + '</span><span class="b-val">' + def.val(v) + '</span>';
+    b.addEventListener("click", function(){
+      gearState[def.key] = v;
+      grp.querySelectorAll(".opt-btn").forEach(function(x){ x.classList.remove("sel"); });
+      b.classList.add("sel");
+      refreshTheory();
+    });
+    grp.appendChild(b);
+  });
+  div.appendChild(name); div.appendChild(grp); box.appendChild(div);
 }
 function buildGears(){
   var rDefs = [
-    { key: "r1", name: "r1 · 0R 抽头", opts: [1,2,3,4,5,6,7,8], label: function(v){ return v + " 档"; } },
-    { key: "r2", name: "r2 · 1R", opts: [0,1], label: function(v){ return v === 0 ? "f（断开）" : "1 档"; } },
-    { key: "r3", name: "r3 · 2R 并联", opts: [0,1,2,3,4,5,6,7,8,9], label: function(v){ return v === 0 ? "f（0支）" : v + " 支"; } },
-    { key: "r4", name: "r4 · 3R 并联", opts: [0,1,2,3,4,5,6,7,8,9], label: function(v){ return v === 0 ? "f（0支）" : v + " 支"; } },
-    { key: "r5", name: "r5 · 4R 并联", opts: [0,1,2,3,4,5,6,7,8,9], label: function(v){ return v === 0 ? "f（0支）" : v + " 支"; } }
+    { key: "r1", name: "r1 · 0R 抽头", opts: [1,2,3,4,5,6,7,8], label: function(v){ return v + " 档"; }, val: function(v){ return gearBtnValR("r1", v); } },
+    { key: "r2", name: "r2 · 1R", opts: [0,1], label: function(v){ return v === 0 ? "f" : "1 档"; }, val: function(v){ return gearBtnValR("r2", v); } },
+    { key: "r3", name: "r3 · 2R 并联", opts: [0,1,2,3,4,5,6,7,8,9], label: function(v){ return v === 0 ? "f" : v + " 支"; }, val: function(v){ return gearBtnValR("r3", v); } },
+    { key: "r4", name: "r4 · 3R 并联", opts: [0,1,2,3,4,5,6,7,8,9], label: function(v){ return v === 0 ? "f" : v + " 支"; }, val: function(v){ return gearBtnValR("r4", v); } },
+    { key: "r5", name: "r5 · 4R 并联", opts: [0,1,2,3,4,5,6,7,8,9], label: function(v){ return v === 0 ? "f" : v + " 支"; }, val: function(v){ return gearBtnValR("r5", v); } }
   ];
   var rBox = $("rGears"); rBox.innerHTML = "";
-  rDefs.forEach(function(def){
-    var div = document.createElement("div"); div.className = "gear";
-    var html = '<label for="g-' + def.key + '">' + def.name + '</label><select id="g-' + def.key + '">';
-    def.opts.forEach(function(v){ html += '<option value="' + v + '"' + (gearState[def.key] === v ? " selected" : "") + '>' + def.label(v) + '</option>'; });
-    html += '</select><div class="val" id="gv-' + def.key + '"></div>';
-    div.innerHTML = html; rBox.appendChild(div);
-    div.querySelector("select").addEventListener("change", function(e){ gearState[def.key] = parseInt(e.target.value, 10); refreshTheory(); });
-  });
+  rDefs.forEach(function(def){ buildGearGroup(rBox, def); });
   var lBox = $("lGears"); lBox.innerHTML = "";
   Object.keys(L_TABLE).forEach(function(k){
-    var div = document.createElement("div"); div.className = "gear";
-    var html = '<label for="g-' + k + '">' + k + '</label><select id="g-' + k + '">';
-    [0,1,2,3].forEach(function(v){ html += '<option value="' + v + '"' + (gearState[k] === v ? " selected" : "") + '>' + v + ' 档</option>'; });
-    html += '</select><div class="val" id="gv-' + k + '"></div>';
-    div.innerHTML = html; lBox.appendChild(div);
-    div.querySelector("select").addEventListener("change", function(e){ gearState[k] = parseInt(e.target.value, 10); refreshTheory(); });
+    buildGearGroup(lBox, { key: k, name: k, opts: [0,1,2,3],
+      label: function(v){ return v + " 档"; },
+      val: function(v){ return fmt(L_TABLE[k][v]) + " Ω"; } });
+  });
+}
+function setupSeg(id, onChange){
+  var box = $(id);
+  box.querySelectorAll(".opt-btn").forEach(function(b){
+    b.addEventListener("click", function(){
+      box.querySelectorAll(".opt-btn").forEach(function(x){ x.classList.remove("sel"); });
+      b.classList.add("sel");
+      onChange(b.getAttribute("data-val"));
+    });
   });
 }
 function currentTheory(){
@@ -455,10 +483,8 @@ function currentTheory(){
   return { R: R, X: X, Z: Math.sqrt(R*R + X*X), L: X / OMEGA };
 }
 function refreshTheory(){
-  ["r1","r2","r3","r4","r5"].forEach(function(k){ $("gv-" + k).textContent = gearLabelR(k, gearState[k]); });
-  Object.keys(L_TABLE).forEach(function(k){ $("gv-" + k).textContent = "X = " + fmt(L_TABLE[k][gearState[k]]) + " Ω"; });
   var t = currentTheory();
-  var u = parseFloat($("mU").value), uType = $("mUType").value;
+  var u = parseFloat($("mU").value), uType = mUTypeVal;
   var iPred = "—", pfPred = "—";
   pfPred = fmt(t.R / t.Z, 3);
   if (u > 0) iPred = fmt(phaseU(u, uType) / t.Z, 1);
@@ -476,14 +502,14 @@ function stat(k, v){ return '<div class="stat"><div class="k">' + k + '</div><di
 function measCalc(){
   var u = parseFloat($("mU").value), i = parseFloat($("mI").value), pf = parseFloat($("mPf").value);
   if (!(u > 0 && i > 0 && pf > 0 && pf <= 1)) return null;
-  var up = phaseU(u, $("mUType").value);
+  var up = phaseU(u, mUTypeVal);
   var Z = up / i, R = Z * pf, X = Z * Math.sqrt(1 - pf * pf);
-  return { u: u, uType: $("mUType").value, uPhase: up, i: i, pf: pf, Z: Z, R: R, X: X, L: X / OMEGA };
+  return { u: u, uType: mUTypeVal, uPhase: up, i: i, pf: pf, Z: Z, R: R, X: X, L: X / OMEGA };
 }
 function refreshMeas(){
   var conv = $("mUConv");
   var u = parseFloat($("mU").value);
-  conv.textContent = ($("mUType").value === "line" && u > 0) ? ("折合相电压 = " + fmt(phaseU(u, "line"), 1) + " V（线电压 ÷√3）") : "";
+  conv.textContent = (mUTypeVal === "line" && u > 0) ? ("折合相电压 = " + fmt(phaseU(u, "line"), 1) + " V（线电压 ÷√3）") : "";
   var m = measCalc();
   if (!m) { $("measStats").innerHTML = '<p class="hint" style="grid-column:1/-1">填上实测电压、电流、功率因数后，这里自动算实测阻抗和与理论的偏差。</p>'; return; }
   var t = currentTheory();
@@ -497,7 +523,6 @@ function refreshMeas(){
     stat("ΔX（实测−理论）", fmtSigned(dX) + " <small>Ω · " + (t.X > 0 ? fmtSigned(dX / t.X * 100, 1) + "%" : "理论 X=0") + "</small>");
 }
 ["mU","mI","mPf"].forEach(function(id){ $(id).addEventListener("input", function(){ refreshTheory(); }); });
-$("mUType").addEventListener("change", refreshTheory);
 
 $("saveBtn").addEventListener("click", function(){
   var m = measCalc();
@@ -511,7 +536,7 @@ $("saveBtn").addEventListener("click", function(){
     u: m.u, uType: m.uType, uPhase: m.uPhase, i: m.i, pf: m.pf,
     measZ: m.Z, measR: m.R, measX: m.X, measL: m.L,
     dR: m.R - t.R, dX: m.X - t.X,
-    phase: $("mPhase").value, note: $("mNote").value.trim()
+    phase: mPhaseVal, note: $("mNote").value.trim()
   };
   var recs = loadRecords(); recs.unshift(rec); saveRecords(recs);
   msg.innerHTML = '<span class="ok">已保存到本浏览器（现在共 ' + recs.length + ' 条）。到「记录」页可以看、删、导出。</span>';
@@ -542,17 +567,16 @@ function nearest(combos, key, target){
 }
 function updateTConv(){
   var u = parseFloat($("tU").value);
-  $("tUConv").textContent = ($("tUType").value === "line" && u > 0) ? ("折合相电压 = " + fmt(phaseU(u, "line"), 1) + " V（线电压 ÷√3）") : "";
+  $("tUConv").textContent = (tUTypeVal === "line" && u > 0) ? ("折合相电压 = " + fmt(phaseU(u, "line"), 1) + " V（线电压 ÷√3）") : "";
 }
 $("tU").addEventListener("input", updateTConv);
-$("tUType").addEventListener("change", updateTConv);
 
 $("solveBtn").addEventListener("click", function(){
   var msg = $("solveMsg");
   var u = parseFloat($("tU").value), i = parseFloat($("tI").value), pf = parseFloat($("tPf").value);
   if (!(u > 0 && i > 0 && pf > 0 && pf <= 1)) { msg.innerHTML = '<span class="err">目标电压、电流、功率因数都要填，cosφ 在 0~1 之间。</span>'; $("solveOut").classList.remove("show"); return; }
   msg.textContent = "";
-  var up = phaseU(u, $("tUType").value);
+  var up = phaseU(u, tUTypeVal);
   var Z = up / i, Rneed = Z * pf, Xneed = Z * Math.sqrt(1 - pf * pf), Lneed = Xneed / OMEGA;
   var cal = avgDelta();
   var dR = cal ? cal.dR : 0, dX = cal ? cal.dX : 0;
@@ -660,6 +684,9 @@ $("csvBtn").addEventListener("click", function(){
 });
 
 /* ================= 初始化 ================= */
+setupSeg("tUType", function(v){ tUTypeVal = v; updateTConv(); });
+setupSeg("mUType", function(v){ mUTypeVal = v; refreshTheory(); });
+setupSeg("mPhase", function(v){ mPhaseVal = v; });
 buildGears();
 refreshTheory();
 renderRecords();
