@@ -72,16 +72,15 @@
   .field .unit-note{font-size:12px;color:var(--muted);margin-top:3px}
 
   .gear-list{display:flex;flex-direction:column;gap:10px}
-  .gear{display:flex;align-items:flex-start;gap:12px;background:var(--surface2);border-radius:8px;padding:10px 12px}
-  .gear-name{font-size:16px;font-weight:800;font-family:var(--mono);min-width:36px;padding-top:11px}
+  .gear{display:flex;align-items:center;gap:8px;background:var(--surface2);border-radius:8px;padding:8px 10px}
+  .gear-name{font-size:15px;font-weight:800;font-family:var(--mono);min-width:30px}
   .btn-group{display:flex;flex-wrap:wrap;gap:6px}
-  .gear .btn-group{flex:1;min-width:0}
-  .opt-btn{background:var(--surface);border:1.5px solid var(--line);border-radius:7px;padding:6px 10px;min-height:46px;min-width:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;color:var(--ink)}
+  .gear .btn-group{flex:1;min-width:0;flex-wrap:nowrap;gap:4px}
+  .gear .opt-btn{flex:1 1 0;min-width:0}
+  .opt-btn{background:var(--surface);border:1.5px solid var(--line);border-radius:7px;padding:6px 4px;min-height:38px;display:flex;align-items:center;justify-content:center;color:var(--ink)}
   .opt-btn .b-main{font-size:14.5px;font-weight:600;line-height:1.25}
-  .opt-btn .b-val{font-size:11px;color:var(--muted);font-family:var(--mono);line-height:1.25}
   .opt-btn.sel{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
   .opt-btn.sel .b-main{font-weight:800}
-  .opt-btn.sel .b-val{color:var(--accent-ink);opacity:.85}
   .opt-btn:active{opacity:.85}
   .seg{display:flex;flex-wrap:wrap;gap:6px}
   .seg .opt-btn{flex-direction:row;min-width:0;min-height:38px;padding:6px 14px;font-size:14px;font-weight:600}
@@ -117,7 +116,8 @@
   .empty{color:var(--muted);text-align:center;padding:28px 10px;border:1px dashed var(--line);border-radius:10px}
   .solver-out{display:none}
   .solver-out.show{display:block}
-  .rec-gears-big{font-family:var(--mono);font-size:15px;background:var(--accent-soft);border-radius:8px;padding:12px 14px;line-height:2;overflow-x:auto}
+  .rec-gears-big{font-size:13.5px;background:var(--accent-soft);border-radius:8px;padding:10px 12px;line-height:1.9;overflow-x:auto}
+  .rec-gears-big .g-line{display:block;white-space:nowrap}
   footer{color:var(--muted);font-size:12.5px;margin-top:26px;border-top:1px solid var(--line);padding-top:10px}
 </style>
 </head>
@@ -153,7 +153,6 @@
     <button type="button" data-tab="solve" class="active">① 目标求解</button>
     <button type="button" data-tab="gear">② 组合与实测</button>
     <button type="button" data-tab="records">③ 记录</button>
-    <button type="button" data-tab="plate">④ 铭牌数据</button>
   </nav>
 
   <!-- ===== ① 目标求解 ===== -->
@@ -195,6 +194,7 @@
       <p class="hint" id="calibNote"></p>
       <h3>推荐组合（穷举 18,000 种电阻组合 + 4,096 种电感组合取最接近）</h3>
       <div class="rec-gears-big" id="solveGears"></div>
+      <p class="hint" id="solveTheory"></p>
       <div class="stats" id="solvePred"></div>
       <p class="hint">预计值 = 推荐组合的理论值 + 历史平均偏差（ΔR / ΔX）。录的实测记录越多，这个预计越贴近你这台设备的真实表现。</p>
     </div>
@@ -208,7 +208,7 @@
       <h2 style="margin-top:22px">电感（串联，电抗相加）</h2>
       <div class="gear-list" id="lGears"></div>
       <div class="stats" id="theoryStats"></div>
-      <p class="hint">理论值按铭牌公式算：电阻五组并联取倒数，电感六组查表相加。Rf 不计入理论值（见铭牌数据页），它和接触、引线等偏差一起，靠下面的实测记录来校准。</p>
+      <p class="hint">理论值按铭牌公式算：电阻五组并联取倒数，电感六组查表相加。Rf 不计入理论值，它和接触、引线等偏差一起，靠下面的实测记录来校准。</p>
     </div>
 
     <div class="card">
@@ -266,71 +266,6 @@
         <button type="button" class="btn-danger" id="clearBtn">清空全部记录</button>
       </div>
       <div id="recList"></div>
-    </div>
-  </section>
-
-  <!-- ===== ④ 铭牌数据 ===== -->
-  <section class="tab" id="tab-plate">
-    <div class="card">
-      <h2>铭牌参数（RL-1.5/0.7 交流调节负载）</h2>
-      <div class="table-scroll"><table>
-        <tr><th>型号</th><td style="text-align:left">LR-1.5/0.7</td><th>调节细度</th><td style="text-align:left">≤3%</td></tr>
-        <tr><th>适用电压</th><td style="text-align:left">AC 220V ~ 726V</td><th>工作制</th><td style="text-align:left">见 GB-14048</td></tr>
-        <tr><th>电流范围</th><td style="text-align:left">0.1 ~ 1.5 kA</td><th>功率因数</th><td style="text-align:left">0.3 ~ 0.95</td></tr>
-        <tr><th>电阻范围</th><td style="text-align:left">0.026 ~ 4 Ω</td><th>电抗范围</th><td style="text-align:left">0.027 ~ 4 Ω</td></tr>
-        <tr><th>制造日期</th><td style="text-align:left">2019.1</td><th>出厂序号</th><td style="text-align:left">S1806098-1-A（A相）/ S1806098-1-B（B相）</td></tr>
-        <tr><th>厂家</th><td style="text-align:left" colspan="3">苏州上电科电气设备有限公司（江苏）· 电话 0512-65659456</td></tr>
-      </table></div>
-      <p class="hint">接线拓扑：输入端 → 电阻组（五组并联）→ 中间母线 → 电感组 1L~6L（串联）→ 输出端。A、B、C 三相柜铭牌除出厂序号外完全一致，阻抗与组合通用。</p>
-
-      <div class="warn-box">
-        <strong>注意，对不上的一处：</strong>按铭牌接线图，五组电阻是并联的，并联后总电阻最大只能到 <span class="num">0.270 Ω</span>（只有 R1 选 8、其余全选 f 时），和铭牌参数表写的电阻范围上限 <span class="num">4 Ω</span> 对不上。本页不硬凑，理论值就按并联公式算，差多少靠实测记录校准；如果你后来确认某组其实不是并联接法，公式要跟着改。
-      </div>
-
-      <h3>电阻公式</h3>
-      <div class="formula">G = (R1 选 f ? 0 : 1/R(R1)) + (R2=1 ? 1/0.0338 : 0) + n3/2.7 + n4/27 + n5/270 ， R理论 = 1/G</div>
-      <p class="hint">R1（0R）是串联链抽头单选，下面是累计值，选 f 时断开不接、电导为 0；R3 / R4 / R5 的数字就是并联接入的个数 n（f = 0 个，断开）。</p>
-      <div class="table-scroll"><table>
-        <tr><th>R1（0R）</th><th>f</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th></tr>
-        <tr><td>累计电阻 Ω</td><td>断开</td><td>0.0338</td><td>0.0386</td><td>0.0450</td><td>0.0540</td><td>0.0675</td><td>0.0900</td><td>0.135</td><td>0.270</td></tr>
-        <tr><td>单段 mΩ</td><td>—</td><td>33.8</td><td>4.8</td><td>6.4</td><td>9.0</td><td>13.5</td><td>22.5</td><td>45.0</td><td>135</td></tr>
-      </table></div>
-      <div class="table-scroll" style="margin-top:10px"><table>
-        <tr><th>组</th><th>代号</th><th>可选值</th><th>每个 Ω</th><th>算法</th></tr>
-        <tr><td>R2</td><td>1R</td><td style="text-align:left">f / 1</td><td>0.0338</td><td style="text-align:left">f 断开；选 1 时接入</td></tr>
-        <tr><td>R3</td><td>2R</td><td style="text-align:left">f / 1~9</td><td>2.7</td><td style="text-align:left">R = 2.7 / n</td></tr>
-        <tr><td>R4</td><td>3R</td><td style="text-align:left">f / 1~9</td><td>27</td><td style="text-align:left">R = 27 / n</td></tr>
-        <tr><td>R5</td><td>4R</td><td style="text-align:left">f / 1~9</td><td>270</td><td style="text-align:left">R = 270 / n</td></tr>
-      </table></div>
-
-      <h3>电感查表（电抗 Ω，选 0 时 = 0）</h3>
-      <div class="formula">X理论 = X(1L) + X(2L) + X(3L) + X(4L) + X(5L) + X(6L) ， L = X / (2π × 50)</div>
-      <div class="table-scroll"><table>
-        <tr><th>电感</th><th>1</th><th>2</th><th>3</th></tr>
-        <tr><td>1L</td><td>0.0016</td><td>0.0028</td><td>0.0039</td></tr>
-        <tr><td>2L</td><td>0.0055</td><td>0.0091</td><td>0.0130</td></tr>
-        <tr><td>3L</td><td>0.0189</td><td>0.032</td><td>0.0464</td></tr>
-        <tr><td>4L</td><td>0.0655</td><td>0.1165</td><td>0.1732</td></tr>
-        <tr><td>5L</td><td>0.2402</td><td>0.4447</td><td>0.7057</td></tr>
-        <tr><td>6L</td><td>0.9531</td><td>1.9005</td><td>3.045</td></tr>
-      </table></div>
-      <p class="hint">六个全选 3 时 X 最大 = 0.0039 + 0.0130 + 0.0464 + 0.1732 + 0.7057 + 3.045 = <span class="num">3.9872 Ω</span>，和铭牌电抗上限 4 Ω 对得上。</p>
-
-      <h3>Rf 值（铭牌原样备查，不计入理论值）</h3>
-      <div class="table-scroll"><table>
-        <tr><th>电感</th><th>Rf 一</th><th>Rf 二</th></tr>
-        <tr><td>1L</td><td>0.27 Ω</td><td>0.5 Ω</td></tr>
-        <tr><td>2L</td><td>0.95 Ω</td><td>1.3 Ω</td></tr>
-        <tr><td>3L</td><td>3.2 Ω</td><td>6 Ω</td></tr>
-        <tr><td>4L</td><td>12 Ω</td><td>20 Ω</td></tr>
-        <tr><td>5L</td><td>40 Ω</td><td>120 Ω</td></tr>
-        <tr><td>6L</td><td>160 Ω</td><td>600 Ω</td></tr>
-      </table></div>
-      <p class="hint">铭牌上每组电感旁标了两个 Rf 值，但图上看不清它怎么接入电路，本页不把它当串联电阻算，只原样列出；它造成的偏差会体现在实测 ΔR / ΔX 里。</p>
-
-      <h3>实测反推公式</h3>
-      <div class="formula">Z实测 = U相 / I实测 ， R实测 = Z × cosφ ， X实测 = Z × √(1 − cosφ²) ， L实测 = X / (2π × 50)</div>
-      <div class="formula">ΔR = R实测 − R理论 ， ΔX = X实测 − X理论（目标求解用全部记录的平均 ΔR / ΔX 修正）</div>
     </div>
   </section>
 
@@ -443,7 +378,7 @@ function buildGearGroup(box, def){
   def.opts.forEach(function(v){
     var b = document.createElement("button"); b.type = "button";
     b.className = "opt-btn" + (gearState[def.key] === v ? " sel" : "");
-    b.innerHTML = '<span class="b-main">' + def.label(v) + '</span><span class="b-val">' + def.val(v) + '</span>';
+    b.innerHTML = '<span class="b-main">' + def.label(v) + '</span>';
     b.addEventListener("click", function(){
       gearState[def.key] = v;
       grp.querySelectorAll(".opt-btn").forEach(function(x){ x.classList.remove("sel"); });
@@ -599,9 +534,9 @@ $("solveBtn").addEventListener("click", function(){
     : '<span class="err">未校准：还没有实测记录，现在只能按纯理论值找组合。先到「组合与实测」页录几条实测，求解会自动带上你这台设备的平均偏差。</span>';
   var g = rb.g, lg = lb.g;
   $("solveGears").innerHTML =
-    "电阻：R1 = " + rDisp(g.r1) + " ｜ R2 = " + rDisp(g.r2) + " ｜ R3 = " + rDisp(g.r3) + " ｜ R4 = " + rDisp(g.r4) + " ｜ R5 = " + rDisp(g.r5) + "<br>" +
-    "电感：L1 = " + lg.L1 + " ｜ L2 = " + lg.L2 + " ｜ L3 = " + lg.L3 + " ｜ L4 = " + lg.L4 + " ｜ L5 = " + lg.L5 + " ｜ L6 = " + lg.L6 + "<br>" +
-    '<span class="hint">该组合理论值：R = ' + fmt(rb.R) + " Ω，X = " + fmt(lb.X) + " Ω</span>";
+    '<span class="g-line">电阻：R1 = ' + rDisp(g.r1) + " ｜ R2 = " + rDisp(g.r2) + " ｜ R3 = " + rDisp(g.r3) + " ｜ R4 = " + rDisp(g.r4) + " ｜ R5 = " + rDisp(g.r5) + "</span>" +
+    '<span class="g-line">电感：L1 = ' + lg.L1 + " ｜ L2 = " + lg.L2 + " ｜ L3 = " + lg.L3 + " ｜ L4 = " + lg.L4 + " ｜ L5 = " + lg.L5 + " ｜ L6 = " + lg.L6 + "</span>";
+  $("solveTheory").textContent = "该组合理论值：R = " + fmt(rb.R) + " Ω，X = " + fmt(lb.X) + " Ω";
   $("solvePred").innerHTML =
     stat("预计电阻 R", fmt(Rp) + " <small>Ω</small>") +
     stat("预计电抗 X", fmt(Xp) + " <small>Ω</small>") +
