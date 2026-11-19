@@ -1,0 +1,668 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="light dark" />
+<link rel="icon" href="data:," />
+<title>1号设备预期波阻抗调节 GitHub版</title>
+<style>
+  :root{
+    --bg:#f4f4f2; --surface:#ffffff; --surface2:#ececea; --ink:#1c1e1c; --muted:#5c625c;
+    --line:#d8d8d2; --accent:#9a5b00; --accent-ink:#ffffff; --accent-soft:#fdf3e0;
+    --good:#1e7a3c; --bad:#b3261e; --bad-soft:#fdecea; --warn-line:#d33a31;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#141615; --surface:#1e201f; --surface2:#262826;
+      --ink:#eceeec; --muted:#a3a8a3; --line:#3a3d3a; --accent:#e8a33d; --accent-ink:#1a1405;
+      --accent-soft:#2e2410; --good:#5cc97e; --bad:#ff8a80; --bad-soft:#331714; --warn-line:#e06055;
+    }
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.55}
+  button,[role="button"],select,input:not([type="checkbox"],[type="radio"]){min-height:36px}
+  button{font-family:inherit;cursor:pointer}
+  .num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+  /* ---------- 密码门 ---------- */
+  #gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50}
+  #gate.hidden{display:none}
+  .gate-card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:28px 24px;max-width:360px;width:100%}
+  .gate-card h1{font-size:20px;margin:0 0 6px;line-height:1.35}
+  .gate-card p{color:var(--muted);margin:0 0 18px;font-size:13.5px}
+  .gate-card label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+  .gate-row{display:flex;gap:8px}
+  .gate-row input{flex:1;min-width:0}
+  #gateErr{color:var(--bad);font-size:13px;min-height:20px;margin:8px 0 0}
+  input,select,textarea{font-family:inherit;font-size:15px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:7px 10px}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
+  .btn{background:var(--accent);color:var(--accent-ink);border:none;border-radius:6px;padding:8px 18px;font-size:15px;font-weight:600}
+  .btn:active{opacity:.85}
+  .btn-ghost{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px 14px;font-size:14px;font-weight:500}
+  .btn-danger{background:var(--surface);color:var(--bad);border:1px solid var(--warn-line);border-radius:6px;padding:6px 12px;font-size:13.5px}
+  .btn-small{min-height:32px;padding:4px 12px;font-size:13.5px}
+
+  /* ---------- 主框架 ---------- */
+  #app.hidden{display:none}
+  .wrap{max-width:1060px;margin:0 auto;padding:18px 14px 48px}
+  header.top{border-bottom:3px solid var(--accent);padding-bottom:12px;margin-bottom:12px}
+  header.top h1{font-size:23px;margin:0;line-height:1.3}
+  header.top .sub{color:var(--muted);font-size:13.5px;margin-top:4px}
+  .storage-note{background:var(--accent-soft);border:1px solid var(--line);border-radius:8px;padding:10px 14px;font-size:13.5px;margin-bottom:14px}
+  .storage-note strong{color:var(--accent)}
+  @media (prefers-color-scheme: dark){.storage-note strong{color:var(--accent)}}
+
+  nav.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+  nav.tabs button{background:var(--surface);border:1px solid var(--line);color:var(--muted);border-radius:6px;padding:8px 16px;font-size:15px;font-weight:600;min-height:40px}
+  nav.tabs button.active{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+  section.tab{display:none}
+  section.tab.active{display:block}
+  h2{font-size:18px;margin:4px 0 12px}
+  h3{font-size:15.5px;margin:20px 0 8px}
+  .hint{color:var(--muted);font-size:13px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:14px}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+  .field label{display:block;font-size:13px;color:var(--muted);margin-bottom:5px}
+  .field input,.field select,.field textarea{width:100%}
+  .field .unit-note{font-size:12px;color:var(--muted);margin-top:3px}
+
+  .gear-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:10px}
+  .gear{background:var(--surface2);border-radius:8px;padding:10px}
+  .gear label{display:block;font-size:13px;font-weight:700;margin-bottom:5px}
+  .gear select{width:100%}
+  .gear .val{font-size:12px;color:var(--muted);margin-top:5px;font-family:var(--mono)}
+
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:10px;margin-top:12px}
+  .stat{background:var(--surface2);border-radius:8px;padding:10px 12px}
+  .stat .k{font-size:12.5px;color:var(--muted)}
+  .stat .v{font-size:19px;font-weight:700;font-family:var(--mono);margin-top:2px}
+  .stat .v small{font-size:12px;font-weight:400;color:var(--muted)}
+
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th,td{border:1px solid var(--line);padding:6px 8px;text-align:right}
+  th{background:var(--surface2);font-weight:600}
+  td:first-child,th:first-child{text-align:left}
+  .table-scroll{overflow-x:auto}
+  @media (max-width:640px){ .table-scroll{overflow-x:visible} }
+
+  .warn-box{border:2px solid var(--warn-line);background:var(--bad-soft);border-radius:8px;padding:12px 14px;font-size:14px;margin:14px 0}
+  .warn-box strong{color:var(--bad)}
+  .ok{color:var(--good)} .err{color:var(--bad)}
+  .formula{font-family:var(--mono);font-size:13px;background:var(--surface2);border-radius:6px;padding:10px 12px;overflow-x:auto;white-space:nowrap;margin:8px 0}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;align-items:center}
+
+  .rec{border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:14px 16px;margin-bottom:12px}
+  .rec-head{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline}
+  .rec-head .t{font-weight:700}
+  .rec-head .meta{color:var(--muted);font-size:12.5px}
+  .rec dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:4px 18px;margin:10px 0 0;font-size:13.5px}
+  .rec dl div{display:flex;justify-content:space-between;gap:8px;border-bottom:1px dashed var(--line);padding:3px 0}
+  .rec dt{color:var(--muted)} .rec dd{margin:0;font-family:var(--mono);text-align:right}
+  .rec .gears{font-family:var(--mono);font-size:13px;background:var(--surface2);border-radius:6px;padding:7px 10px;margin-top:10px;overflow-x:auto;white-space:nowrap}
+  .empty{color:var(--muted);text-align:center;padding:28px 10px;border:1px dashed var(--line);border-radius:10px}
+  .solver-out{display:none}
+  .solver-out.show{display:block}
+  .rec-gears-big{font-family:var(--mono);font-size:15px;background:var(--accent-soft);border-radius:8px;padding:12px 14px;line-height:2;overflow-x:auto}
+  footer{color:var(--muted);font-size:12.5px;margin-top:26px;border-top:1px solid var(--line);padding-top:10px}
+</style>
+</head>
+<body>
+
+<!-- ============ 密码门 ============ -->
+<div id="gate">
+  <form class="gate-card" id="gateForm" autocomplete="off">
+    <h1>1号设备 · 预期波阻抗调节</h1>
+    <p>RL-1.5/0.7 交流调节负载 · 输入口令进入。这道门只是挡随手点开的人，口令本身不做加密存储承诺。</p>
+    <label for="gateInput">口令</label>
+    <div class="gate-row">
+      <input type="password" id="gateInput" placeholder="输入口令" />
+      <button type="submit" class="btn">进入</button>
+    </div>
+    <p id="gateErr" role="alert"></p>
+  </form>
+</div>
+
+<!-- ============ 主页面 ============ -->
+<div id="app" class="hidden">
+<div class="wrap">
+  <header class="top">
+    <h1>1号设备 · 预期波阻抗调节</h1>
+    <div class="sub">RL-1.5/0.7 交流调节负载（型号 LR-1.5/0.7）· A / B / C 三相阻抗相同，共用一套档位 · 50 Hz</div>
+  </header>
+
+  <div class="storage-note">
+    <strong>记录存在这台设备的浏览器里</strong>（localStorage）：换浏览器、换手机或清掉浏览器缓存，记录就没了，也不会同步到别处。重要数据请用「记录」页的导出 CSV 留底。
+  </div>
+
+  <nav class="tabs" role="tablist">
+    <button type="button" data-tab="solve" class="active">① 目标求解</button>
+    <button type="button" data-tab="gear">② 档位与实测</button>
+    <button type="button" data-tab="records">③ 记录</button>
+    <button type="button" data-tab="plate">④ 铭牌数据</button>
+  </nav>
+
+  <!-- ===== ① 目标求解 ===== -->
+  <section class="tab active" id="tab-solve">
+    <div class="card">
+      <h2>目标求解：给定 U / I / cosφ，反推档位</h2>
+      <div class="grid">
+        <div class="field">
+          <label for="tU">目标电压 U（V）</label>
+          <input type="number" id="tU" inputmode="decimal" step="any" min="0" placeholder="如 400" />
+        </div>
+        <div class="field">
+          <label for="tUType">电压类型</label>
+          <select id="tUType">
+            <option value="phase">相电压（直接用）</option>
+            <option value="line">线电压（先 ÷√3 换成相电压）</option>
+          </select>
+          <div class="unit-note" id="tUConv"></div>
+        </div>
+        <div class="field">
+          <label for="tI">目标电流 I（A）</label>
+          <input type="number" id="tI" inputmode="decimal" step="any" min="0" placeholder="如 500" />
+        </div>
+        <div class="field">
+          <label for="tPf">目标功率因数 cosφ</label>
+          <input type="number" id="tPf" inputmode="decimal" step="any" min="0" max="1" placeholder="如 0.8" />
+          <div class="unit-note">铭牌范围 0.3 ~ 0.95</div>
+        </div>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn" id="solveBtn">求解推荐档位</button>
+        <span class="hint" id="solveMsg"></span>
+      </div>
+    </div>
+
+    <div class="card solver-out" id="solveOut">
+      <h3 style="margin-top:0">目标对应的阻抗</h3>
+      <div class="stats" id="solveNeed"></div>
+      <p class="hint" id="calibNote"></p>
+      <h3>推荐档位（穷举 16,000 种电阻组合 + 4,096 种电感组合取最接近）</h3>
+      <div class="rec-gears-big" id="solveGears"></div>
+      <div class="stats" id="solvePred"></div>
+      <p class="hint">预计值 = 推荐档位的理论值 + 历史平均偏差（ΔR / ΔX）。录的实测记录越多，这个预计越贴近你这台设备的真实表现。</p>
+    </div>
+  </section>
+
+  <!-- ===== ② 档位与实测 ===== -->
+  <section class="tab" id="tab-gear">
+    <div class="card">
+      <h2>电阻档位（五组并联，总电导相加）</h2>
+      <div class="gear-grid" id="rGears"></div>
+      <h2 style="margin-top:22px">电感档位（1L~6L 串联，电抗相加）</h2>
+      <div class="gear-grid" id="lGears"></div>
+      <div class="stats" id="theoryStats"></div>
+      <p class="hint">理论值按铭牌公式算：电阻五组并联取倒数，电感六组查表相加。Rf 不计入理论值（见铭牌数据页），它和接触、引线等偏差一起，靠下面的实测记录来校准。</p>
+    </div>
+
+    <div class="card">
+      <h2>录入实测</h2>
+      <div class="grid">
+        <div class="field">
+          <label for="mU">实测电压 U（V）</label>
+          <input type="number" id="mU" inputmode="decimal" step="any" min="0" placeholder="如 400" />
+        </div>
+        <div class="field">
+          <label for="mUType">电压类型</label>
+          <select id="mUType">
+            <option value="phase">相电压（直接用）</option>
+            <option value="line">线电压（先 ÷√3 换成相电压）</option>
+          </select>
+          <div class="unit-note" id="mUConv"></div>
+        </div>
+        <div class="field">
+          <label for="mI">实测电流 I（A）</label>
+          <input type="number" id="mI" inputmode="decimal" step="any" min="0" placeholder="如 480" />
+        </div>
+        <div class="field">
+          <label for="mPf">实测功率因数 cosφ</label>
+          <input type="number" id="mPf" inputmode="decimal" step="any" min="0" max="1" placeholder="如 0.82" />
+        </div>
+        <div class="field">
+          <label for="mPhase">相别（仅备注，三相档位相同）</label>
+          <select id="mPhase">
+            <option value="A">A 相</option>
+            <option value="B">B 相</option>
+            <option value="C">C 相</option>
+            <option value="">不注明</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="mNote">备注</label>
+          <input type="text" id="mNote" placeholder="可留空" />
+        </div>
+      </div>
+      <div class="stats" id="measStats"></div>
+      <div class="actions">
+        <button type="button" class="btn" id="saveBtn">保存这条记录</button>
+        <span class="hint" id="saveMsg"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== ③ 记录 ===== -->
+  <section class="tab" id="tab-records">
+    <div class="card">
+      <h2>实测记录</h2>
+      <p class="hint" id="recSummary"></p>
+      <div class="actions" style="margin:0 0 14px">
+        <button type="button" class="btn-ghost" id="csvBtn">导出 CSV</button>
+        <button type="button" class="btn-danger" id="clearBtn">清空全部记录</button>
+      </div>
+      <div id="recList"></div>
+    </div>
+  </section>
+
+  <!-- ===== ④ 铭牌数据 ===== -->
+  <section class="tab" id="tab-plate">
+    <div class="card">
+      <h2>铭牌参数（RL-1.5/0.7 交流调节负载）</h2>
+      <div class="table-scroll"><table>
+        <tr><th>型号</th><td style="text-align:left">LR-1.5/0.7</td><th>调节细度</th><td style="text-align:left">≤3%</td></tr>
+        <tr><th>适用电压</th><td style="text-align:left">AC 220V ~ 726V</td><th>工作制</th><td style="text-align:left">见 GB-14048</td></tr>
+        <tr><th>电流范围</th><td style="text-align:left">0.1 ~ 1.5 kA</td><th>功率因数</th><td style="text-align:left">0.3 ~ 0.95</td></tr>
+        <tr><th>电阻范围</th><td style="text-align:left">0.026 ~ 4 Ω</td><th>电抗范围</th><td style="text-align:left">0.027 ~ 4 Ω</td></tr>
+        <tr><th>制造日期</th><td style="text-align:left">2019.1</td><th>出厂序号</th><td style="text-align:left">S1806098-1-A（A相）/ S1806098-1-B（B相）</td></tr>
+        <tr><th>厂家</th><td style="text-align:left" colspan="3">苏州上电科电气设备有限公司（江苏）· 电话 0512-65659456</td></tr>
+      </table></div>
+      <p class="hint">接线拓扑：输入端 → 电阻组（五组并联）→ 中间母线 → 电感组 1L~6L（串联）→ 输出端。A、B、C 三相柜铭牌除出厂序号外完全一致，阻抗与档位通用。</p>
+
+      <div class="warn-box">
+        <strong>注意，对不上的一处：</strong>按铭牌接线图，五组电阻是并联的，并联后总电阻最大只能到 <span class="num">0.270 Ω</span>（只有 r1 打 8 档、其余全断开时），和铭牌参数表写的电阻范围上限 <span class="num">4 Ω</span> 对不上。本页不硬凑，理论值就按并联公式算，差多少靠实测记录校准；如果你后来确认某组其实不是并联接法，公式要跟着改。
+      </div>
+
+      <h3>电阻公式</h3>
+      <div class="formula">G = 1/R(r1) + (r2=1 ? 1/0.0338 : 0) + n3/2.7 + n4/27 + n5/270 ， R理论 = 1/G</div>
+      <p class="hint">r1（0R）是串联链抽头单选，下面是累计值；r3 / r4 / r5 的档位数字就是并联接入的支路数 n（f = 0 支，断开）。</p>
+      <div class="table-scroll"><table>
+        <tr><th>r1（0R）档位</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th></tr>
+        <tr><td>累计电阻 Ω</td><td>0.0338</td><td>0.0386</td><td>0.0450</td><td>0.0540</td><td>0.0675</td><td>0.0900</td><td>0.135</td><td>0.270</td></tr>
+        <tr><td>单段 mΩ</td><td>33.8</td><td>4.8</td><td>6.4</td><td>9.0</td><td>13.5</td><td>22.5</td><td>45.0</td><td>135</td></tr>
+      </table></div>
+      <div class="table-scroll" style="margin-top:10px"><table>
+        <tr><th>组</th><th>代号</th><th>档位</th><th>每支 Ω</th><th>算法</th></tr>
+        <tr><td>r2</td><td>1R</td><td style="text-align:left">f / 1</td><td>0.0338</td><td style="text-align:left">f 断开；1 档接入 1 支</td></tr>
+        <tr><td>r3</td><td>2R</td><td style="text-align:left">f / 1~9</td><td>2.7</td><td style="text-align:left">R = 2.7 / n</td></tr>
+        <tr><td>r4</td><td>3R</td><td style="text-align:left">f / 1~9</td><td>27</td><td style="text-align:left">R = 27 / n</td></tr>
+        <tr><td>r5</td><td>4R</td><td style="text-align:left">f / 1~9</td><td>270</td><td style="text-align:left">R = 270 / n</td></tr>
+      </table></div>
+
+      <h3>电感查表（电抗 Ω，0 档 = 0）</h3>
+      <div class="formula">X理论 = X(1L) + X(2L) + X(3L) + X(4L) + X(5L) + X(6L) ， L = X / (2π × 50)</div>
+      <div class="table-scroll"><table>
+        <tr><th>电感</th><th>1 档</th><th>2 档</th><th>3 档</th></tr>
+        <tr><td>1L</td><td>0.0016</td><td>0.0028</td><td>0.0039</td></tr>
+        <tr><td>2L</td><td>0.0055</td><td>0.0091</td><td>0.0130</td></tr>
+        <tr><td>3L</td><td>0.0189</td><td>0.032</td><td>0.0464</td></tr>
+        <tr><td>4L</td><td>0.0655</td><td>0.1165</td><td>0.1732</td></tr>
+        <tr><td>5L</td><td>0.2402</td><td>0.4447</td><td>0.7057</td></tr>
+        <tr><td>6L</td><td>0.9531</td><td>1.9005</td><td>3.045</td></tr>
+      </table></div>
+      <p class="hint">六个全打 3 档时 X 最大 = 0.0039 + 0.0130 + 0.0464 + 0.1732 + 0.7057 + 3.045 = <span class="num">3.9872 Ω</span>，和铭牌电抗上限 4 Ω 对得上。</p>
+
+      <h3>Rf 值（铭牌原样备查，不计入理论值）</h3>
+      <div class="table-scroll"><table>
+        <tr><th>电感</th><th>Rf 一</th><th>Rf 二</th></tr>
+        <tr><td>1L</td><td>0.27 Ω</td><td>0.5 Ω</td></tr>
+        <tr><td>2L</td><td>0.95 Ω</td><td>1.3 Ω</td></tr>
+        <tr><td>3L</td><td>3.2 Ω</td><td>6 Ω</td></tr>
+        <tr><td>4L</td><td>12 Ω</td><td>20 Ω</td></tr>
+        <tr><td>5L</td><td>40 Ω</td><td>120 Ω</td></tr>
+        <tr><td>6L</td><td>160 Ω</td><td>600 Ω</td></tr>
+      </table></div>
+      <p class="hint">铭牌上每组电感旁标了两个 Rf 值，但图上看不清它怎么接入电路，本页不把它当串联电阻算，只原样列出；它造成的偏差会体现在实测 ΔR / ΔX 里。</p>
+
+      <h3>实测反推公式</h3>
+      <div class="formula">Z实测 = U相 / I实测 ， R实测 = Z × cosφ ， X实测 = Z × √(1 − cosφ²) ， L实测 = X / (2π × 50)</div>
+      <div class="formula">ΔR = R实测 − R理论 ， ΔX = X实测 − X理论（目标求解用全部记录的平均 ΔR / ΔX 修正）</div>
+    </div>
+  </section>
+
+  <footer>数据来源：设备铭牌照片（A 相 S1806098-1-A / B 相 S1806098-1-B，2019.1）。理论值与实测对不上时以实测为准，偏差会随记录积累自动用于目标求解的修正。</footer>
+</div>
+</div>
+
+<script>
+"use strict";
+/* ================= 铭牌数据（唯一数据源） ================= */
+var R1_TABLE = [0.0338, 0.0386, 0.0450, 0.0540, 0.0675, 0.0900, 0.135, 0.270]; /* r1 1~8档累计 Ω */
+var R2_VAL = 0.0338;
+var BRANCH = { r3: 2.7, r4: 27, r5: 270 }; /* 每支 Ω */
+var L_TABLE = {
+  L1: [0, 0.0016, 0.0028, 0.0039],
+  L2: [0, 0.0055, 0.0091, 0.0130],
+  L3: [0, 0.0189, 0.032, 0.0464],
+  L4: [0, 0.0655, 0.1165, 0.1732],
+  L5: [0, 0.2402, 0.4447, 0.7057],
+  L6: [0, 0.9531, 1.9005, 3.045]
+};
+var FREQ = 50, OMEGA = 2 * Math.PI * FREQ;
+var LS_KEY = "rl15_records_v1";
+var PWD_HASH = "a21d84d80fcab9ec08db16e87339c08bc4db7aec15b08a37650ced4ac2cd866a";
+
+/* ================= 工具 ================= */
+function $(id){ return document.getElementById(id); }
+function fmt(x, d){ if (x === null || x === undefined || !isFinite(x)) return "—"; return x.toFixed(d === undefined ? 4 : d); }
+function fmtSigned(x, d){ if (!isFinite(x)) return "—"; return (x >= 0 ? "+" : "") + x.toFixed(d === undefined ? 4 : d); }
+function phaseU(u, type){ return type === "line" ? u / Math.sqrt(3) : u; }
+function nowStr(ts){ var d = new Date(ts); function p(n){ return (n < 10 ? "0" : "") + n; } return d.getFullYear() + "-" + p(d.getMonth()+1) + "-" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes()); }
+
+/* ================= 理论计算 ================= */
+function theoryR(g){ /* g: {r1:1..8, r2:0/1, r3:0..9, r4:0..9, r5:0..9} */
+  var G = 1 / R1_TABLE[g.r1 - 1];
+  if (g.r2 === 1) G += 1 / R2_VAL;
+  G += g.r3 / BRANCH.r3 + g.r4 / BRANCH.r4 + g.r5 / BRANCH.r5;
+  return 1 / G;
+}
+function theoryX(g){ /* g: {L1..L6: 0..3} */
+  var x = 0, k;
+  for (k in L_TABLE) x += L_TABLE[k][g[k]];
+  return x;
+}
+
+/* ================= 记录存储（localStorage） ================= */
+function loadRecords(){
+  try { var raw = localStorage.getItem(LS_KEY); var arr = raw ? JSON.parse(raw) : []; return Array.isArray(arr) ? arr : []; }
+  catch(e){ return []; }
+}
+function saveRecords(arr){ try { localStorage.setItem(LS_KEY, JSON.stringify(arr)); } catch(e){} }
+function avgDelta(){
+  var recs = loadRecords();
+  if (!recs.length) return null;
+  var sr = 0, sx = 0;
+  recs.forEach(function(r){ sr += r.dR; sx += r.dX; });
+  return { dR: sr / recs.length, dX: sx / recs.length, n: recs.length };
+}
+
+/* ================= 密码门 ================= */
+function unlock(){
+  $("gate").classList.add("hidden");
+  $("app").classList.remove("hidden");
+}
+if (sessionStorage.getItem("rl15_unlocked") === "1") unlock();
+$("gateForm").addEventListener("submit", function(ev){
+  ev.preventDefault();
+  var val = $("gateInput").value;
+  if (!val) { $("gateErr").textContent = "先输入口令。"; return; }
+  var enc = new TextEncoder().encode(val);
+  crypto.subtle.digest("SHA-256", enc).then(function(buf){
+    var hex = Array.prototype.map.call(new Uint8Array(buf), function(b){ return ("0" + b.toString(16)).slice(-2); }).join("");
+    if (hex === PWD_HASH) {
+      sessionStorage.setItem("rl15_unlocked", "1");
+      $("gateErr").textContent = "";
+      unlock();
+    } else {
+      $("gateErr").textContent = "口令不对，再试一次。";
+      $("gateInput").select();
+    }
+  }).catch(function(){ $("gateErr").textContent = "当前浏览器算不了校验，换个浏览器试试。"; });
+});
+
+/* ================= 页签 ================= */
+var tabBtns = document.querySelectorAll("nav.tabs button");
+tabBtns.forEach(function(btn){
+  btn.addEventListener("click", function(){
+    tabBtns.forEach(function(b){ b.classList.remove("active"); });
+    btn.classList.add("active");
+    document.querySelectorAll("section.tab").forEach(function(s){ s.classList.remove("active"); });
+    $("tab-" + btn.getAttribute("data-tab")).classList.add("active");
+    if (btn.getAttribute("data-tab") === "records") renderRecords();
+  });
+});
+
+/* ================= ② 档位选择器 ================= */
+var gearState = { r1: 8, r2: 0, r3: 0, r4: 0, r5: 0, L1: 0, L2: 0, L3: 0, L4: 0, L5: 0, L6: 0 };
+function gearLabelR(key, v){
+  if (key === "r1") return "R = " + fmt(R1_TABLE[v-1]) + " Ω";
+  if (key === "r2") return v === 1 ? "R = 0.0338 Ω" : "断开";
+  var n = v; return n === 0 ? "断开" : ("R = " + fmt(BRANCH[key] / n) + " Ω");
+}
+function buildGears(){
+  var rDefs = [
+    { key: "r1", name: "r1 · 0R 抽头", opts: [1,2,3,4,5,6,7,8], label: function(v){ return v + " 档"; } },
+    { key: "r2", name: "r2 · 1R", opts: [0,1], label: function(v){ return v === 0 ? "f（断开）" : "1 档"; } },
+    { key: "r3", name: "r3 · 2R 并联", opts: [0,1,2,3,4,5,6,7,8,9], label: function(v){ return v === 0 ? "f（0支）" : v + " 支"; } },
+    { key: "r4", name: "r4 · 3R 并联", opts: [0,1,2,3,4,5,6,7,8,9], label: function(v){ return v === 0 ? "f（0支）" : v + " 支"; } },
+    { key: "r5", name: "r5 · 4R 并联", opts: [0,1,2,3,4,5,6,7,8,9], label: function(v){ return v === 0 ? "f（0支）" : v + " 支"; } }
+  ];
+  var rBox = $("rGears"); rBox.innerHTML = "";
+  rDefs.forEach(function(def){
+    var div = document.createElement("div"); div.className = "gear";
+    var html = '<label for="g-' + def.key + '">' + def.name + '</label><select id="g-' + def.key + '">';
+    def.opts.forEach(function(v){ html += '<option value="' + v + '"' + (gearState[def.key] === v ? " selected" : "") + '>' + def.label(v) + '</option>'; });
+    html += '</select><div class="val" id="gv-' + def.key + '"></div>';
+    div.innerHTML = html; rBox.appendChild(div);
+    div.querySelector("select").addEventListener("change", function(e){ gearState[def.key] = parseInt(e.target.value, 10); refreshTheory(); });
+  });
+  var lBox = $("lGears"); lBox.innerHTML = "";
+  Object.keys(L_TABLE).forEach(function(k){
+    var div = document.createElement("div"); div.className = "gear";
+    var html = '<label for="g-' + k + '">' + k + '</label><select id="g-' + k + '">';
+    [0,1,2,3].forEach(function(v){ html += '<option value="' + v + '"' + (gearState[k] === v ? " selected" : "") + '>' + v + ' 档</option>'; });
+    html += '</select><div class="val" id="gv-' + k + '"></div>';
+    div.innerHTML = html; lBox.appendChild(div);
+    div.querySelector("select").addEventListener("change", function(e){ gearState[k] = parseInt(e.target.value, 10); refreshTheory(); });
+  });
+}
+function currentTheory(){
+  var R = theoryR(gearState), X = theoryX(gearState);
+  return { R: R, X: X, Z: Math.sqrt(R*R + X*X), L: X / OMEGA };
+}
+function refreshTheory(){
+  ["r1","r2","r3","r4","r5"].forEach(function(k){ $("gv-" + k).textContent = gearLabelR(k, gearState[k]); });
+  Object.keys(L_TABLE).forEach(function(k){ $("gv-" + k).textContent = "X = " + fmt(L_TABLE[k][gearState[k]]) + " Ω"; });
+  var t = currentTheory();
+  var u = parseFloat($("mU").value), uType = $("mUType").value;
+  var iPred = "—", pfPred = "—";
+  pfPred = fmt(t.R / t.Z, 3);
+  if (u > 0) iPred = fmt(phaseU(u, uType) / t.Z, 1);
+  $("theoryStats").innerHTML =
+    stat("理论电阻 R", fmt(t.R) + " <small>Ω</small>") +
+    stat("理论电抗 X", fmt(t.X) + " <small>Ω</small>") +
+    stat("理论电感 L", fmt(t.L * 1000, 2) + " <small>mH</small>") +
+    stat("理论阻抗 Z", fmt(t.Z) + " <small>Ω</small>") +
+    stat("按实测电压预计电流", iPred + " <small>A</small>") +
+    stat("理论功率因数", pfPred);
+  refreshMeas();
+}
+function stat(k, v){ return '<div class="stat"><div class="k">' + k + '</div><div class="v">' + v + '</div></div>'; }
+
+function measCalc(){
+  var u = parseFloat($("mU").value), i = parseFloat($("mI").value), pf = parseFloat($("mPf").value);
+  if (!(u > 0 && i > 0 && pf > 0 && pf <= 1)) return null;
+  var up = phaseU(u, $("mUType").value);
+  var Z = up / i, R = Z * pf, X = Z * Math.sqrt(1 - pf * pf);
+  return { u: u, uType: $("mUType").value, uPhase: up, i: i, pf: pf, Z: Z, R: R, X: X, L: X / OMEGA };
+}
+function refreshMeas(){
+  var conv = $("mUConv");
+  var u = parseFloat($("mU").value);
+  conv.textContent = ($("mUType").value === "line" && u > 0) ? ("折合相电压 = " + fmt(phaseU(u, "line"), 1) + " V（线电压 ÷√3）") : "";
+  var m = measCalc();
+  if (!m) { $("measStats").innerHTML = '<p class="hint" style="grid-column:1/-1">填上实测电压、电流、功率因数后，这里自动算实测阻抗和与理论的偏差。</p>'; return; }
+  var t = currentTheory();
+  var dR = m.R - t.R, dX = m.X - t.X;
+  $("measStats").innerHTML =
+    stat("实测阻抗 Z", fmt(m.Z) + " <small>Ω</small>") +
+    stat("实测电阻 R", fmt(m.R) + " <small>Ω</small>") +
+    stat("实测电抗 X", fmt(m.X) + " <small>Ω</small>") +
+    stat("实测电感 L", fmt(m.L * 1000, 2) + " <small>mH</small>") +
+    stat("ΔR（实测−理论）", fmtSigned(dR) + " <small>Ω · " + fmtSigned(dR / t.R * 100, 1) + "%</small>") +
+    stat("ΔX（实测−理论）", fmtSigned(dX) + " <small>Ω · " + (t.X > 0 ? fmtSigned(dX / t.X * 100, 1) + "%" : "理论 X=0") + "</small>");
+}
+["mU","mI","mPf"].forEach(function(id){ $(id).addEventListener("input", function(){ refreshTheory(); }); });
+$("mUType").addEventListener("change", refreshTheory);
+
+$("saveBtn").addEventListener("click", function(){
+  var m = measCalc();
+  var msg = $("saveMsg");
+  if (!m) { msg.innerHTML = '<span class="err">先把实测电压、电流、功率因数填全（cosφ 要在 0~1 之间）。</span>'; return; }
+  var t = currentTheory();
+  var rec = {
+    ts: Date.now(),
+    gears: JSON.parse(JSON.stringify(gearState)),
+    theoryR: t.R, theoryX: t.X,
+    u: m.u, uType: m.uType, uPhase: m.uPhase, i: m.i, pf: m.pf,
+    measZ: m.Z, measR: m.R, measX: m.X, measL: m.L,
+    dR: m.R - t.R, dX: m.X - t.X,
+    phase: $("mPhase").value, note: $("mNote").value.trim()
+  };
+  var recs = loadRecords(); recs.unshift(rec); saveRecords(recs);
+  msg.innerHTML = '<span class="ok">已保存到本浏览器（现在共 ' + recs.length + ' 条）。到「记录」页可以看、删、导出。</span>';
+});
+
+/* ================= ① 目标求解 ================= */
+var R_COMBOS = null, L_COMBOS = null;
+function buildCombos(){
+  if (R_COMBOS) return;
+  R_COMBOS = []; L_COMBOS = [];
+  var a, b, c, d, e;
+  for (a = 1; a <= 8; a++) for (b = 0; b <= 1; b++) for (c = 0; c <= 9; c++) for (d = 0; d <= 9; d++) for (e = 0; e <= 9; e++) {
+    var g = { r1: a, r2: b, r3: c, r4: d, r5: e };
+    R_COMBOS.push({ g: g, R: theoryR(g) });
+  }
+  var keys = Object.keys(L_TABLE), idx = [0,0,0,0,0,0], total = 4096, n, j;
+  for (n = 0; n < total; n++) {
+    var tmp = n, gg = {}, x = 0;
+    for (j = 5; j >= 0; j--) { idx[j] = tmp % 4; tmp = Math.floor(tmp / 4); }
+    keys.forEach(function(k, j2){ gg[k] = idx[j2]; x += L_TABLE[k][idx[j2]]; });
+    L_COMBOS.push({ g: gg, X: x });
+  }
+}
+function nearest(combos, key, target){
+  var best = null, bd = Infinity;
+  combos.forEach(function(c){ var dd = Math.abs(c[key] - target); if (dd < bd) { bd = dd; best = c; } });
+  return best;
+}
+function updateTConv(){
+  var u = parseFloat($("tU").value);
+  $("tUConv").textContent = ($("tUType").value === "line" && u > 0) ? ("折合相电压 = " + fmt(phaseU(u, "line"), 1) + " V（线电压 ÷√3）") : "";
+}
+$("tU").addEventListener("input", updateTConv);
+$("tUType").addEventListener("change", updateTConv);
+
+$("solveBtn").addEventListener("click", function(){
+  var msg = $("solveMsg");
+  var u = parseFloat($("tU").value), i = parseFloat($("tI").value), pf = parseFloat($("tPf").value);
+  if (!(u > 0 && i > 0 && pf > 0 && pf <= 1)) { msg.innerHTML = '<span class="err">目标电压、电流、功率因数都要填，cosφ 在 0~1 之间。</span>'; $("solveOut").classList.remove("show"); return; }
+  msg.textContent = "";
+  var up = phaseU(u, $("tUType").value);
+  var Z = up / i, Rneed = Z * pf, Xneed = Z * Math.sqrt(1 - pf * pf), Lneed = Xneed / OMEGA;
+  var cal = avgDelta();
+  var dR = cal ? cal.dR : 0, dX = cal ? cal.dX : 0;
+  var Rt = Math.max(Rneed - dR, 0.001), Xt = Math.max(Xneed - dX, 0);
+  buildCombos();
+  var rb = nearest(R_COMBOS, "R", Rt), lb = nearest(L_COMBOS, "X", Xt);
+  var Rp = rb.R + dR, Xp = lb.X + dX;
+  var Zp = Math.sqrt(Rp*Rp + Xp*Xp), Ip = up / Zp, pfp = Rp / Zp;
+  $("solveNeed").innerHTML =
+    stat("相电压", fmt(up, 1) + " <small>V</small>") +
+    stat("需要 Z", fmt(Z) + " <small>Ω</small>") +
+    stat("需要 R", fmt(Rneed) + " <small>Ω</small>") +
+    stat("需要 X", fmt(Xneed) + " <small>Ω</small>") +
+    stat("需要 L", fmt(Lneed * 1000, 2) + " <small>mH</small>");
+  $("calibNote").innerHTML = cal
+    ? ("已按 " + cal.n + " 条实测记录的平均偏差修正：ΔR 平均 " + fmtSigned(cal.dR) + " Ω、ΔX 平均 " + fmtSigned(cal.dX) + " Ω，所以要找的理论档位是 R ≈ " + fmt(Rt) + " Ω、X ≈ " + fmt(Xt) + " Ω。")
+    : '<span class="err">未校准：还没有实测记录，现在只能按纯理论值找档位。先到「档位与实测」页录几条实测，求解会自动带上你这台设备的平均偏差。</span>';
+  var g = rb.g, lg = lb.g;
+  $("solveGears").innerHTML =
+    "电阻：r1 = " + g.r1 + " 档 ｜ r2 = " + (g.r2 === 1 ? "1 档" : "f 断开") + " ｜ r3 = " + (g.r3 === 0 ? "f" : g.r3 + " 支") + " ｜ r4 = " + (g.r4 === 0 ? "f" : g.r4 + " 支") + " ｜ r5 = " + (g.r5 === 0 ? "f" : g.r5 + " 支") + "<br>" +
+    "电感：1L = " + lg.L1 + " 档 ｜ 2L = " + lg.L2 + " 档 ｜ 3L = " + lg.L3 + " 档 ｜ 4L = " + lg.L4 + " 档 ｜ 5L = " + lg.L5 + " 档 ｜ 6L = " + lg.L6 + " 档<br>" +
+    '<span class="hint">该组合理论值：R = ' + fmt(rb.R) + " Ω，X = " + fmt(lb.X) + " Ω</span>";
+  $("solvePred").innerHTML =
+    stat("预计电阻 R", fmt(Rp) + " <small>Ω</small>") +
+    stat("预计电抗 X", fmt(Xp) + " <small>Ω</small>") +
+    stat("预计电流", fmt(Ip, 1) + " <small>A</small>") +
+    stat("预计功率因数", fmt(pfp, 3)) +
+    stat("电流误差", fmtSigned((Ip - i) / i * 100, 2) + " <small>%</small>") +
+    stat("功率因数误差", fmtSigned(pfp - pf, 3));
+  $("solveOut").classList.add("show");
+});
+
+/* ================= ③ 记录列表 / CSV ================= */
+function gearSummary(g){
+  return "r1:" + g.r1 + " r2:" + (g.r2 === 1 ? "1" : "f") + " r3:" + (g.r3 === 0 ? "f" : g.r3) + " r4:" + (g.r4 === 0 ? "f" : g.r4) + " r5:" + (g.r5 === 0 ? "f" : g.r5) +
+    " ｜ 1L:" + g.L1 + " 2L:" + g.L2 + " 3L:" + g.L3 + " 4L:" + g.L4 + " 5L:" + g.L5 + " 6L:" + g.L6;
+}
+function renderRecords(){
+  var recs = loadRecords();
+  var cal = avgDelta();
+  $("recSummary").textContent = recs.length
+    ? ("共 " + recs.length + " 条。平均偏差 ΔR " + fmtSigned(cal.dR) + " Ω、ΔX " + fmtSigned(cal.dX) + " Ω（目标求解正在用这个平均值修正）。记录只存在本浏览器里。")
+    : "还没有记录。先到「档位与实测」页选好档位、填实测数据保存。";
+  var box = $("recList");
+  if (!recs.length) { box.innerHTML = '<div class="empty">暂无记录</div>'; return; }
+  box.innerHTML = "";
+  recs.forEach(function(r, idx){
+    var div = document.createElement("div"); div.className = "rec";
+    var dRp = r.theoryR > 0 ? fmtSigned(r.dR / r.theoryR * 100, 1) + "%" : "—";
+    var dXp = r.theoryX > 0 ? fmtSigned(r.dX / r.theoryX * 100, 1) + "%" : "—";
+    div.innerHTML =
+      '<div class="rec-head"><span class="t">' + nowStr(r.ts) + (r.phase ? " · " + r.phase + " 相" : "") + '</span>' +
+      '<span class="meta">' + (r.note ? escapeHtml(r.note) + " · " : "") + '<button type="button" class="btn-danger btn-small" data-del="' + idx + '">删除</button></span></div>' +
+      '<div class="gears">' + gearSummary(r.gears) + '</div>' +
+      '<dl>' +
+      '<div><dt>实测 U / I / cosφ</dt><dd>' + fmt(r.u, 1) + 'V' + (r.uType === "line" ? "(线)" : "(相)") + ' · ' + fmt(r.i, 1) + 'A · ' + fmt(r.pf, 3) + '</dd></div>' +
+      '<div><dt>理论 R / X</dt><dd>' + fmt(r.theoryR) + ' / ' + fmt(r.theoryX) + ' Ω</dd></div>' +
+      '<div><dt>实测 R / X / L</dt><dd>' + fmt(r.measR) + ' / ' + fmt(r.measX) + ' Ω / ' + fmt(r.measL * 1000, 2) + ' mH</dd></div>' +
+      '<div><dt>ΔR</dt><dd>' + fmtSigned(r.dR) + ' Ω（' + dRp + '）</dd></div>' +
+      '<div><dt>ΔX</dt><dd>' + fmtSigned(r.dX) + ' Ω（' + dXp + '）</dd></div>' +
+      '</dl>';
+    box.appendChild(div);
+  });
+  box.querySelectorAll("[data-del]").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var recs2 = loadRecords();
+      recs2.splice(parseInt(btn.getAttribute("data-del"), 10), 1);
+      saveRecords(recs2); renderRecords();
+    });
+  });
+}
+function escapeHtml(s){ return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+
+$("clearBtn").addEventListener("click", function(){
+  if (!loadRecords().length) return;
+  if (this.getAttribute("data-confirm") === "1") {
+    saveRecords([]); renderRecords();
+    this.textContent = "清空全部记录"; this.removeAttribute("data-confirm");
+  } else {
+    this.textContent = "再点一次确认清空（不可恢复）"; this.setAttribute("data-confirm", "1");
+    var btn = this;
+    setTimeout(function(){ btn.textContent = "清空全部记录"; btn.removeAttribute("data-confirm"); }, 4000);
+  }
+});
+$("csvBtn").addEventListener("click", function(){
+  var recs = loadRecords();
+  if (!recs.length) { $("recSummary").textContent = "还没有记录可导出。"; return; }
+  var head = ["时间","相别","备注","r1","r2","r3支数","r4支数","r5支数","1L","2L","3L","4L","5L","6L","理论R(Ω)","理论X(Ω)","实测U(V)","电压类型","相电压(V)","实测I(A)","实测cosφ","实测Z(Ω)","实测R(Ω)","实测X(Ω)","实测L(mH)","ΔR(Ω)","ΔR%","ΔX(Ω)","ΔX%"];
+  var lines = [head.join(",")];
+  recs.slice().reverse().forEach(function(r){
+    var row = [nowStr(r.ts), r.phase || "", '"' + String(r.note || "").replace(/"/g, '""') + '"',
+      r.gears.r1, r.gears.r2 === 1 ? "1" : "f", r.gears.r3, r.gears.r4, r.gears.r5,
+      r.gears.L1, r.gears.L2, r.gears.L3, r.gears.L4, r.gears.L5, r.gears.L6,
+      fmt(r.theoryR), fmt(r.theoryX), fmt(r.u, 2), r.uType === "line" ? "线电压" : "相电压", fmt(r.uPhase, 2),
+      fmt(r.i, 2), fmt(r.pf, 4), fmt(r.measZ), fmt(r.measR), fmt(r.measX), fmt(r.measL * 1000, 3),
+      fmtSigned(r.dR), r.theoryR > 0 ? fmt(r.dR / r.theoryR * 100, 2) : "", fmtSigned(r.dX), r.theoryX > 0 ? fmt(r.dX / r.theoryX * 100, 2) : ""];
+    lines.push(row.join(","));
+  });
+  var blob = new Blob(["\ufeff" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "1号设备阻抗实测记录.csv";
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 500);
+});
+
+/* ================= 初始化 ================= */
+buildGears();
+refreshTheory();
+renderRecords();
+</script>
+</body>
+</html>
