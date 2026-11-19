@@ -71,10 +71,11 @@
   .field input,.field select,.field textarea{width:100%}
   .field .unit-note{font-size:12px;color:var(--muted);margin-top:3px}
 
-  .gear-list{display:flex;flex-direction:column;gap:12px}
-  .gear{background:var(--surface2);border-radius:8px;padding:10px 12px}
-  .gear-name{font-size:13.5px;font-weight:700;margin-bottom:8px}
+  .gear-list{display:flex;flex-direction:column;gap:10px}
+  .gear{display:flex;align-items:flex-start;gap:12px;background:var(--surface2);border-radius:8px;padding:10px 12px}
+  .gear-name{font-size:16px;font-weight:800;font-family:var(--mono);min-width:36px;padding-top:11px}
   .btn-group{display:flex;flex-wrap:wrap;gap:6px}
+  .gear .btn-group{flex:1;min-width:0}
   .opt-btn{background:var(--surface);border:1.5px solid var(--line);border-radius:7px;padding:6px 10px;min-height:46px;min-width:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;color:var(--ink)}
   .opt-btn .b-main{font-size:14.5px;font-weight:600;line-height:1.25}
   .opt-btn .b-val{font-size:11px;color:var(--muted);font-family:var(--mono);line-height:1.25}
@@ -141,7 +142,7 @@
 <div class="wrap">
   <header class="top">
     <h1>1号设备 · 预期波阻抗调节</h1>
-    <div class="sub">RL-1.5/0.7 交流调节负载（型号 LR-1.5/0.7）· A / B / C 三相阻抗相同，共用一套档位 · 50 Hz</div>
+    <div class="sub">RL-1.5/0.7 交流调节负载（型号 LR-1.5/0.7）· A / B / C 三相阻抗相同，共用一套组合 · 50 Hz</div>
   </header>
 
   <div class="storage-note">
@@ -150,7 +151,7 @@
 
   <nav class="tabs" role="tablist">
     <button type="button" data-tab="solve" class="active">① 目标求解</button>
-    <button type="button" data-tab="gear">② 档位与实测</button>
+    <button type="button" data-tab="gear">② 组合与实测</button>
     <button type="button" data-tab="records">③ 记录</button>
     <button type="button" data-tab="plate">④ 铭牌数据</button>
   </nav>
@@ -158,7 +159,7 @@
   <!-- ===== ① 目标求解 ===== -->
   <section class="tab active" id="tab-solve">
     <div class="card">
-      <h2>目标求解：给定 U / I / cosφ，反推档位</h2>
+      <h2>目标求解：给定 U / I / cosφ，反推组合</h2>
       <div class="grid">
         <div class="field">
           <label for="tU">目标电压 U（V）</label>
@@ -183,7 +184,7 @@
         </div>
       </div>
       <div class="actions">
-        <button type="button" class="btn" id="solveBtn">求解推荐档位</button>
+        <button type="button" class="btn" id="solveBtn">求解推荐组合</button>
         <span class="hint" id="solveMsg"></span>
       </div>
     </div>
@@ -192,19 +193,19 @@
       <h3 style="margin-top:0">目标对应的阻抗</h3>
       <div class="stats" id="solveNeed"></div>
       <p class="hint" id="calibNote"></p>
-      <h3>推荐档位（穷举 16,000 种电阻组合 + 4,096 种电感组合取最接近）</h3>
+      <h3>推荐组合（穷举 18,000 种电阻组合 + 4,096 种电感组合取最接近）</h3>
       <div class="rec-gears-big" id="solveGears"></div>
       <div class="stats" id="solvePred"></div>
-      <p class="hint">预计值 = 推荐档位的理论值 + 历史平均偏差（ΔR / ΔX）。录的实测记录越多，这个预计越贴近你这台设备的真实表现。</p>
+      <p class="hint">预计值 = 推荐组合的理论值 + 历史平均偏差（ΔR / ΔX）。录的实测记录越多，这个预计越贴近你这台设备的真实表现。</p>
     </div>
   </section>
 
-  <!-- ===== ② 档位与实测 ===== -->
+  <!-- ===== ② 组合与实测 ===== -->
   <section class="tab" id="tab-gear">
     <div class="card">
-      <h2>电阻档位（五组并联，总电导相加）</h2>
+      <h2>电阻（五组并联，总电导相加）</h2>
       <div class="gear-list" id="rGears"></div>
-      <h2 style="margin-top:22px">电感档位（1L~6L 串联，电抗相加）</h2>
+      <h2 style="margin-top:22px">电感（串联，电抗相加）</h2>
       <div class="gear-list" id="lGears"></div>
       <div class="stats" id="theoryStats"></div>
       <p class="hint">理论值按铭牌公式算：电阻五组并联取倒数，电感六组查表相加。Rf 不计入理论值（见铭牌数据页），它和接触、引线等偏差一起，靠下面的实测记录来校准。</p>
@@ -234,7 +235,7 @@
           <input type="number" id="mPf" inputmode="decimal" step="any" min="0" max="1" placeholder="如 0.82" />
         </div>
         <div class="field">
-          <label>相别（仅备注，三相档位相同）</label>
+          <label>相别（仅备注，三相组合相同）</label>
           <div class="seg" id="mPhase" role="group" aria-label="相别">
             <button type="button" class="opt-btn sel" data-val="A">A 相</button>
             <button type="button" class="opt-btn" data-val="B">B 相</button>
@@ -280,32 +281,32 @@
         <tr><th>制造日期</th><td style="text-align:left">2019.1</td><th>出厂序号</th><td style="text-align:left">S1806098-1-A（A相）/ S1806098-1-B（B相）</td></tr>
         <tr><th>厂家</th><td style="text-align:left" colspan="3">苏州上电科电气设备有限公司（江苏）· 电话 0512-65659456</td></tr>
       </table></div>
-      <p class="hint">接线拓扑：输入端 → 电阻组（五组并联）→ 中间母线 → 电感组 1L~6L（串联）→ 输出端。A、B、C 三相柜铭牌除出厂序号外完全一致，阻抗与档位通用。</p>
+      <p class="hint">接线拓扑：输入端 → 电阻组（五组并联）→ 中间母线 → 电感组 1L~6L（串联）→ 输出端。A、B、C 三相柜铭牌除出厂序号外完全一致，阻抗与组合通用。</p>
 
       <div class="warn-box">
-        <strong>注意，对不上的一处：</strong>按铭牌接线图，五组电阻是并联的，并联后总电阻最大只能到 <span class="num">0.270 Ω</span>（只有 r1 打 8 档、其余全断开时），和铭牌参数表写的电阻范围上限 <span class="num">4 Ω</span> 对不上。本页不硬凑，理论值就按并联公式算，差多少靠实测记录校准；如果你后来确认某组其实不是并联接法，公式要跟着改。
+        <strong>注意，对不上的一处：</strong>按铭牌接线图，五组电阻是并联的，并联后总电阻最大只能到 <span class="num">0.270 Ω</span>（只有 R1 选 8、其余全选 f 时），和铭牌参数表写的电阻范围上限 <span class="num">4 Ω</span> 对不上。本页不硬凑，理论值就按并联公式算，差多少靠实测记录校准；如果你后来确认某组其实不是并联接法，公式要跟着改。
       </div>
 
       <h3>电阻公式</h3>
-      <div class="formula">G = 1/R(r1) + (r2=1 ? 1/0.0338 : 0) + n3/2.7 + n4/27 + n5/270 ， R理论 = 1/G</div>
-      <p class="hint">r1（0R）是串联链抽头单选，下面是累计值；r3 / r4 / r5 的档位数字就是并联接入的支路数 n（f = 0 支，断开）。</p>
+      <div class="formula">G = (R1 选 f ? 0 : 1/R(R1)) + (R2=1 ? 1/0.0338 : 0) + n3/2.7 + n4/27 + n5/270 ， R理论 = 1/G</div>
+      <p class="hint">R1（0R）是串联链抽头单选，下面是累计值，选 f 时断开不接、电导为 0；R3 / R4 / R5 的数字就是并联接入的个数 n（f = 0 个，断开）。</p>
       <div class="table-scroll"><table>
-        <tr><th>r1（0R）档位</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th></tr>
-        <tr><td>累计电阻 Ω</td><td>0.0338</td><td>0.0386</td><td>0.0450</td><td>0.0540</td><td>0.0675</td><td>0.0900</td><td>0.135</td><td>0.270</td></tr>
-        <tr><td>单段 mΩ</td><td>33.8</td><td>4.8</td><td>6.4</td><td>9.0</td><td>13.5</td><td>22.5</td><td>45.0</td><td>135</td></tr>
+        <tr><th>R1（0R）</th><th>f</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th></tr>
+        <tr><td>累计电阻 Ω</td><td>断开</td><td>0.0338</td><td>0.0386</td><td>0.0450</td><td>0.0540</td><td>0.0675</td><td>0.0900</td><td>0.135</td><td>0.270</td></tr>
+        <tr><td>单段 mΩ</td><td>—</td><td>33.8</td><td>4.8</td><td>6.4</td><td>9.0</td><td>13.5</td><td>22.5</td><td>45.0</td><td>135</td></tr>
       </table></div>
       <div class="table-scroll" style="margin-top:10px"><table>
-        <tr><th>组</th><th>代号</th><th>档位</th><th>每支 Ω</th><th>算法</th></tr>
-        <tr><td>r2</td><td>1R</td><td style="text-align:left">f / 1</td><td>0.0338</td><td style="text-align:left">f 断开；1 档接入 1 支</td></tr>
-        <tr><td>r3</td><td>2R</td><td style="text-align:left">f / 1~9</td><td>2.7</td><td style="text-align:left">R = 2.7 / n</td></tr>
-        <tr><td>r4</td><td>3R</td><td style="text-align:left">f / 1~9</td><td>27</td><td style="text-align:left">R = 27 / n</td></tr>
-        <tr><td>r5</td><td>4R</td><td style="text-align:left">f / 1~9</td><td>270</td><td style="text-align:left">R = 270 / n</td></tr>
+        <tr><th>组</th><th>代号</th><th>可选值</th><th>每个 Ω</th><th>算法</th></tr>
+        <tr><td>R2</td><td>1R</td><td style="text-align:left">f / 1</td><td>0.0338</td><td style="text-align:left">f 断开；选 1 时接入</td></tr>
+        <tr><td>R3</td><td>2R</td><td style="text-align:left">f / 1~9</td><td>2.7</td><td style="text-align:left">R = 2.7 / n</td></tr>
+        <tr><td>R4</td><td>3R</td><td style="text-align:left">f / 1~9</td><td>27</td><td style="text-align:left">R = 27 / n</td></tr>
+        <tr><td>R5</td><td>4R</td><td style="text-align:left">f / 1~9</td><td>270</td><td style="text-align:left">R = 270 / n</td></tr>
       </table></div>
 
-      <h3>电感查表（电抗 Ω，0 档 = 0）</h3>
+      <h3>电感查表（电抗 Ω，选 0 时 = 0）</h3>
       <div class="formula">X理论 = X(1L) + X(2L) + X(3L) + X(4L) + X(5L) + X(6L) ， L = X / (2π × 50)</div>
       <div class="table-scroll"><table>
-        <tr><th>电感</th><th>1 档</th><th>2 档</th><th>3 档</th></tr>
+        <tr><th>电感</th><th>1</th><th>2</th><th>3</th></tr>
         <tr><td>1L</td><td>0.0016</td><td>0.0028</td><td>0.0039</td></tr>
         <tr><td>2L</td><td>0.0055</td><td>0.0091</td><td>0.0130</td></tr>
         <tr><td>3L</td><td>0.0189</td><td>0.032</td><td>0.0464</td></tr>
@@ -313,7 +314,7 @@
         <tr><td>5L</td><td>0.2402</td><td>0.4447</td><td>0.7057</td></tr>
         <tr><td>6L</td><td>0.9531</td><td>1.9005</td><td>3.045</td></tr>
       </table></div>
-      <p class="hint">六个全打 3 档时 X 最大 = 0.0039 + 0.0130 + 0.0464 + 0.1732 + 0.7057 + 3.045 = <span class="num">3.9872 Ω</span>，和铭牌电抗上限 4 Ω 对得上。</p>
+      <p class="hint">六个全选 3 时 X 最大 = 0.0039 + 0.0130 + 0.0464 + 0.1732 + 0.7057 + 3.045 = <span class="num">3.9872 Ω</span>，和铭牌电抗上限 4 Ω 对得上。</p>
 
       <h3>Rf 值（铭牌原样备查，不计入理论值）</h3>
       <div class="table-scroll"><table>
@@ -340,9 +341,9 @@
 <script>
 "use strict";
 /* ================= 铭牌数据（唯一数据源） ================= */
-var R1_TABLE = [0.0338, 0.0386, 0.0450, 0.0540, 0.0675, 0.0900, 0.135, 0.270]; /* r1 1~8档累计 Ω */
+var R1_TABLE = [0.0338, 0.0386, 0.0450, 0.0540, 0.0675, 0.0900, 0.135, 0.270]; /* R1 选 1~8 的累计 Ω；选 f（值 0）时断开 */
 var R2_VAL = 0.0338;
-var BRANCH = { r3: 2.7, r4: 27, r5: 270 }; /* 每支 Ω */
+var BRANCH = { r3: 2.7, r4: 27, r5: 270 }; /* 每个 Ω */
 var L_TABLE = {
   L1: [0, 0.0016, 0.0028, 0.0039],
   L2: [0, 0.0055, 0.0091, 0.0130],
@@ -363,12 +364,14 @@ function phaseU(u, type){ return type === "line" ? u / Math.sqrt(3) : u; }
 function nowStr(ts){ var d = new Date(ts); function p(n){ return (n < 10 ? "0" : "") + n; } return d.getFullYear() + "-" + p(d.getMonth()+1) + "-" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes()); }
 
 /* ================= 理论计算 ================= */
-function theoryR(g){ /* g: {r1:1..8, r2:0/1, r3:0..9, r4:0..9, r5:0..9} */
-  var G = 1 / R1_TABLE[g.r1 - 1];
+function theoryR(g){ /* g: {r1:0..8（0=f 断开）, r2:0/1, r3:0..9, r4:0..9, r5:0..9} */
+  var G = 0;
+  if (g.r1 >= 1) G += 1 / R1_TABLE[g.r1 - 1];
   if (g.r2 === 1) G += 1 / R2_VAL;
   G += g.r3 / BRANCH.r3 + g.r4 / BRANCH.r4 + g.r5 / BRANCH.r5;
-  return 1 / G;
+  return G > 0 ? 1 / G : Infinity;
 }
+function rDisp(v){ return v === 0 ? "f" : String(v); }
 function theoryX(g){ /* g: {L1..L6: 0..3} */
   var x = 0, k;
   for (k in L_TABLE) x += L_TABLE[k][g[k]];
@@ -425,11 +428,11 @@ tabBtns.forEach(function(btn){
   });
 });
 
-/* ================= ② 档位按钮组 ================= */
+/* ================= ② 组合按钮组（一行一组） ================= */
 var gearState = { r1: 8, r2: 0, r3: 0, r4: 0, r5: 0, L1: 0, L2: 0, L3: 0, L4: 0, L5: 0, L6: 0 };
 var tUTypeVal = "phase", mUTypeVal = "phase", mPhaseVal = "A";
 function gearBtnValR(key, v){
-  if (key === "r1") return fmt(R1_TABLE[v-1]) + " Ω";
+  if (key === "r1") return v === 0 ? "断开" : fmt(R1_TABLE[v-1]) + " Ω";
   if (key === "r2") return v === 1 ? "0.0338 Ω" : "断开";
   return v === 0 ? "断开" : fmt(BRANCH[key] / v) + " Ω";
 }
@@ -453,18 +456,18 @@ function buildGearGroup(box, def){
 }
 function buildGears(){
   var rDefs = [
-    { key: "r1", name: "r1 · 0R 抽头", opts: [1,2,3,4,5,6,7,8], label: function(v){ return v + " 档"; }, val: function(v){ return gearBtnValR("r1", v); } },
-    { key: "r2", name: "r2 · 1R", opts: [0,1], label: function(v){ return v === 0 ? "f" : "1 档"; }, val: function(v){ return gearBtnValR("r2", v); } },
-    { key: "r3", name: "r3 · 2R 并联", opts: [0,1,2,3,4,5,6,7,8,9], label: function(v){ return v === 0 ? "f" : v + " 支"; }, val: function(v){ return gearBtnValR("r3", v); } },
-    { key: "r4", name: "r4 · 3R 并联", opts: [0,1,2,3,4,5,6,7,8,9], label: function(v){ return v === 0 ? "f" : v + " 支"; }, val: function(v){ return gearBtnValR("r4", v); } },
-    { key: "r5", name: "r5 · 4R 并联", opts: [0,1,2,3,4,5,6,7,8,9], label: function(v){ return v === 0 ? "f" : v + " 支"; }, val: function(v){ return gearBtnValR("r5", v); } }
+    { key: "r1", name: "R1", opts: [0,1,2,3,4,5,6,7,8], label: function(v){ return rDisp(v); }, val: function(v){ return gearBtnValR("r1", v); } },
+    { key: "r2", name: "R2", opts: [0,1], label: function(v){ return rDisp(v); }, val: function(v){ return gearBtnValR("r2", v); } },
+    { key: "r3", name: "R3", opts: [0,1,2,3,4,5,6,7,8,9], label: function(v){ return rDisp(v); }, val: function(v){ return gearBtnValR("r3", v); } },
+    { key: "r4", name: "R4", opts: [0,1,2,3,4,5,6,7,8,9], label: function(v){ return rDisp(v); }, val: function(v){ return gearBtnValR("r4", v); } },
+    { key: "r5", name: "R5", opts: [0,1,2,3,4,5,6,7,8,9], label: function(v){ return rDisp(v); }, val: function(v){ return gearBtnValR("r5", v); } }
   ];
   var rBox = $("rGears"); rBox.innerHTML = "";
   rDefs.forEach(function(def){ buildGearGroup(rBox, def); });
   var lBox = $("lGears"); lBox.innerHTML = "";
   Object.keys(L_TABLE).forEach(function(k){
     buildGearGroup(lBox, { key: k, name: k, opts: [0,1,2,3],
-      label: function(v){ return v + " 档"; },
+      label: function(v){ return String(v); },
       val: function(v){ return fmt(L_TABLE[k][v]) + " Ω"; } });
   });
 }
@@ -548,7 +551,7 @@ function buildCombos(){
   if (R_COMBOS) return;
   R_COMBOS = []; L_COMBOS = [];
   var a, b, c, d, e;
-  for (a = 1; a <= 8; a++) for (b = 0; b <= 1; b++) for (c = 0; c <= 9; c++) for (d = 0; d <= 9; d++) for (e = 0; e <= 9; e++) {
+  for (a = 0; a <= 8; a++) for (b = 0; b <= 1; b++) for (c = 0; c <= 9; c++) for (d = 0; d <= 9; d++) for (e = 0; e <= 9; e++) {
     var g = { r1: a, r2: b, r3: c, r4: d, r5: e };
     R_COMBOS.push({ g: g, R: theoryR(g) });
   }
@@ -592,12 +595,12 @@ $("solveBtn").addEventListener("click", function(){
     stat("需要 X", fmt(Xneed) + " <small>Ω</small>") +
     stat("需要 L", fmt(Lneed * 1000, 2) + " <small>mH</small>");
   $("calibNote").innerHTML = cal
-    ? ("已按 " + cal.n + " 条实测记录的平均偏差修正：ΔR 平均 " + fmtSigned(cal.dR) + " Ω、ΔX 平均 " + fmtSigned(cal.dX) + " Ω，所以要找的理论档位是 R ≈ " + fmt(Rt) + " Ω、X ≈ " + fmt(Xt) + " Ω。")
-    : '<span class="err">未校准：还没有实测记录，现在只能按纯理论值找档位。先到「档位与实测」页录几条实测，求解会自动带上你这台设备的平均偏差。</span>';
+    ? ("已按 " + cal.n + " 条实测记录的平均偏差修正：ΔR 平均 " + fmtSigned(cal.dR) + " Ω、ΔX 平均 " + fmtSigned(cal.dX) + " Ω，所以要找的理论组合是 R ≈ " + fmt(Rt) + " Ω、X ≈ " + fmt(Xt) + " Ω。")
+    : '<span class="err">未校准：还没有实测记录，现在只能按纯理论值找组合。先到「组合与实测」页录几条实测，求解会自动带上你这台设备的平均偏差。</span>';
   var g = rb.g, lg = lb.g;
   $("solveGears").innerHTML =
-    "电阻：r1 = " + g.r1 + " 档 ｜ r2 = " + (g.r2 === 1 ? "1 档" : "f 断开") + " ｜ r3 = " + (g.r3 === 0 ? "f" : g.r3 + " 支") + " ｜ r4 = " + (g.r4 === 0 ? "f" : g.r4 + " 支") + " ｜ r5 = " + (g.r5 === 0 ? "f" : g.r5 + " 支") + "<br>" +
-    "电感：1L = " + lg.L1 + " 档 ｜ 2L = " + lg.L2 + " 档 ｜ 3L = " + lg.L3 + " 档 ｜ 4L = " + lg.L4 + " 档 ｜ 5L = " + lg.L5 + " 档 ｜ 6L = " + lg.L6 + " 档<br>" +
+    "电阻：R1 = " + rDisp(g.r1) + " ｜ R2 = " + rDisp(g.r2) + " ｜ R3 = " + rDisp(g.r3) + " ｜ R4 = " + rDisp(g.r4) + " ｜ R5 = " + rDisp(g.r5) + "<br>" +
+    "电感：L1 = " + lg.L1 + " ｜ L2 = " + lg.L2 + " ｜ L3 = " + lg.L3 + " ｜ L4 = " + lg.L4 + " ｜ L5 = " + lg.L5 + " ｜ L6 = " + lg.L6 + "<br>" +
     '<span class="hint">该组合理论值：R = ' + fmt(rb.R) + " Ω，X = " + fmt(lb.X) + " Ω</span>";
   $("solvePred").innerHTML =
     stat("预计电阻 R", fmt(Rp) + " <small>Ω</small>") +
@@ -611,15 +614,15 @@ $("solveBtn").addEventListener("click", function(){
 
 /* ================= ③ 记录列表 / CSV ================= */
 function gearSummary(g){
-  return "r1:" + g.r1 + " r2:" + (g.r2 === 1 ? "1" : "f") + " r3:" + (g.r3 === 0 ? "f" : g.r3) + " r4:" + (g.r4 === 0 ? "f" : g.r4) + " r5:" + (g.r5 === 0 ? "f" : g.r5) +
-    " ｜ 1L:" + g.L1 + " 2L:" + g.L2 + " 3L:" + g.L3 + " 4L:" + g.L4 + " 5L:" + g.L5 + " 6L:" + g.L6;
+  return "R1:" + rDisp(g.r1) + " R2:" + rDisp(g.r2) + " R3:" + rDisp(g.r3) + " R4:" + rDisp(g.r4) + " R5:" + rDisp(g.r5) +
+    " ｜ L1:" + g.L1 + " L2:" + g.L2 + " L3:" + g.L3 + " L4:" + g.L4 + " L5:" + g.L5 + " L6:" + g.L6;
 }
 function renderRecords(){
   var recs = loadRecords();
   var cal = avgDelta();
   $("recSummary").textContent = recs.length
     ? ("共 " + recs.length + " 条。平均偏差 ΔR " + fmtSigned(cal.dR) + " Ω、ΔX " + fmtSigned(cal.dX) + " Ω（目标求解正在用这个平均值修正）。记录只存在本浏览器里。")
-    : "还没有记录。先到「档位与实测」页选好档位、填实测数据保存。";
+    : "还没有记录。先到「组合与实测」页选好组合、填实测数据保存。";
   var box = $("recList");
   if (!recs.length) { box.innerHTML = '<div class="empty">暂无记录</div>'; return; }
   box.innerHTML = "";
@@ -664,11 +667,11 @@ $("clearBtn").addEventListener("click", function(){
 $("csvBtn").addEventListener("click", function(){
   var recs = loadRecords();
   if (!recs.length) { $("recSummary").textContent = "还没有记录可导出。"; return; }
-  var head = ["时间","相别","备注","r1","r2","r3支数","r4支数","r5支数","1L","2L","3L","4L","5L","6L","理论R(Ω)","理论X(Ω)","实测U(V)","电压类型","相电压(V)","实测I(A)","实测cosφ","实测Z(Ω)","实测R(Ω)","实测X(Ω)","实测L(mH)","ΔR(Ω)","ΔR%","ΔX(Ω)","ΔX%"];
+  var head = ["时间","相别","备注","R1","R2","R3数量","R4数量","R5数量","L1","L2","L3","L4","L5","L6","理论R(Ω)","理论X(Ω)","实测U(V)","电压类型","相电压(V)","实测I(A)","实测cosφ","实测Z(Ω)","实测R(Ω)","实测X(Ω)","实测L(mH)","ΔR(Ω)","ΔR%","ΔX(Ω)","ΔX%"];
   var lines = [head.join(",")];
   recs.slice().reverse().forEach(function(r){
     var row = [nowStr(r.ts), r.phase || "", '"' + String(r.note || "").replace(/"/g, '""') + '"',
-      r.gears.r1, r.gears.r2 === 1 ? "1" : "f", r.gears.r3, r.gears.r4, r.gears.r5,
+      rDisp(r.gears.r1), rDisp(r.gears.r2), r.gears.r3, r.gears.r4, r.gears.r5,
       r.gears.L1, r.gears.L2, r.gears.L3, r.gears.L4, r.gears.L5, r.gears.L6,
       fmt(r.theoryR), fmt(r.theoryX), fmt(r.u, 2), r.uType === "line" ? "线电压" : "相电压", fmt(r.uPhase, 2),
       fmt(r.i, 2), fmt(r.pf, 4), fmt(r.measZ), fmt(r.measR), fmt(r.measX), fmt(r.measL * 1000, 3),
