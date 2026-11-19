@@ -3,631 +3,277 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<meta name="color-scheme" content="light dark" />
-<link rel="icon" href="data:," />
-<title>1号设备预期波阻抗调节 GitHub版</title>
+<title>1号设备预期波阻抗调节</title>
 <style>
-  :root{
-    --bg:#f4f4f2; --surface:#ffffff; --surface2:#ececea; --ink:#1c1e1c; --muted:#5c625c;
-    --line:#d8d8d2; --accent:#9a5b00; --accent-ink:#ffffff; --accent-soft:#fdf3e0;
-    --good:#1e7a3c; --bad:#b3261e; --bad-soft:#fdecea; --warn-line:#d33a31;
-    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
-    --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif;
-  }
-  @media (prefers-color-scheme: dark){
-    :root{
-      --bg:#141615; --surface:#1e201f; --surface2:#262826;
-      --ink:#eceeec; --muted:#a3a8a3; --line:#3a3d3a; --accent:#e8a33d; --accent-ink:#1a1405;
-      --accent-soft:#2e2410; --good:#5cc97e; --bad:#ff8a80; --bad-soft:#331714; --warn-line:#e06055;
-    }
-  }
-  *{box-sizing:border-box}
-  html{-webkit-text-size-adjust:100%}
-  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.55}
-  button,[role="button"],select,input:not([type="checkbox"],[type="radio"]){min-height:36px}
-  button{font-family:inherit;cursor:pointer}
-  .num{font-family:var(--mono);font-variant-numeric:tabular-nums}
-
-  /* ---------- 密码门 ---------- */
-  #gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50}
-  #gate.hidden{display:none}
-  .gate-card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:28px 24px;max-width:360px;width:100%}
-  .gate-card h1{font-size:20px;margin:0 0 6px;line-height:1.35}
-  .gate-card p{color:var(--muted);margin:0 0 18px;font-size:13.5px}
-  .gate-card label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
-  .gate-row{display:flex;gap:8px}
-  .gate-row input{flex:1;min-width:0}
-  #gateErr{color:var(--bad);font-size:13px;min-height:20px;margin:8px 0 0}
-  input,select,textarea{font-family:inherit;font-size:15px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:7px 10px}
-  input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
-  .btn{background:var(--accent);color:var(--accent-ink);border:none;border-radius:6px;padding:8px 18px;font-size:15px;font-weight:600}
-  .btn:active{opacity:.85}
-  .btn-ghost{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px 14px;font-size:14px;font-weight:500}
-  .btn-danger{background:var(--surface);color:var(--bad);border:1px solid var(--warn-line);border-radius:6px;padding:6px 12px;font-size:13.5px}
-  .btn-small{min-height:32px;padding:4px 12px;font-size:13.5px}
-
-  /* ---------- 主框架 ---------- */
-  #app.hidden{display:none}
-  .wrap{max-width:1060px;margin:0 auto;padding:18px 14px 48px}
-  header.top{border-bottom:3px solid var(--accent);padding-bottom:12px;margin-bottom:12px}
-  header.top h1{font-size:23px;margin:0;line-height:1.3}
-  header.top .sub{color:var(--muted);font-size:13.5px;margin-top:4px}
-  .storage-note{background:var(--accent-soft);border:1px solid var(--line);border-radius:8px;padding:10px 14px;font-size:13.5px;margin-bottom:14px}
-  .storage-note strong{color:var(--accent)}
-  @media (prefers-color-scheme: dark){.storage-note strong{color:var(--accent)}}
-
-  nav.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
-  nav.tabs button{background:var(--surface);border:1px solid var(--line);color:var(--muted);border-radius:6px;padding:8px 16px;font-size:15px;font-weight:600;min-height:40px}
-  nav.tabs button.active{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-  section.tab{display:none}
-  section.tab.active{display:block}
-  h2{font-size:18px;margin:4px 0 12px}
-  h3{font-size:15.5px;margin:20px 0 8px}
-  .hint{color:var(--muted);font-size:13px}
-  .card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:14px}
-
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
-  .field label{display:block;font-size:13px;color:var(--muted);margin-bottom:5px}
-  .field input,.field select,.field textarea{width:100%}
-  .field .unit-note{font-size:12px;color:var(--muted);margin-top:3px}
-
-  .gear-list{display:flex;flex-direction:column;gap:10px}
-  .gear{display:flex;align-items:center;gap:8px;background:var(--surface2);border-radius:8px;padding:8px 10px}
-  .gear-name{font-size:15px;font-weight:800;font-family:var(--mono);min-width:30px}
-  .btn-group{display:flex;flex-wrap:wrap;gap:6px}
-  .gear .btn-group{flex:1;min-width:0;flex-wrap:nowrap;gap:4px}
-  .gear .opt-btn{flex:1 1 0;min-width:0}
-  .opt-btn{background:var(--surface);border:1.5px solid var(--line);border-radius:7px;padding:6px 4px;min-height:38px;display:flex;align-items:center;justify-content:center;color:var(--ink)}
-  .opt-btn .b-main{font-size:14.5px;font-weight:600;line-height:1.25}
-  .opt-btn.sel{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-  .opt-btn.sel .b-main{font-weight:800}
-  .opt-btn:active{opacity:.85}
-  .seg{display:flex;flex-wrap:wrap;gap:6px}
-  .seg .opt-btn{flex-direction:row;min-width:0;min-height:38px;padding:6px 14px;font-size:14px;font-weight:600}
-  .seg .opt-btn.sel{font-weight:800}
-
-  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:10px;margin-top:12px}
-  .stat{background:var(--surface2);border-radius:8px;padding:10px 12px}
-  .stat .k{font-size:12.5px;color:var(--muted)}
-  .stat .v{font-size:19px;font-weight:700;font-family:var(--mono);margin-top:2px}
-  .stat .v small{font-size:12px;font-weight:400;color:var(--muted)}
-
-  table{width:100%;border-collapse:collapse;font-size:13.5px}
-  th,td{border:1px solid var(--line);padding:6px 8px;text-align:right}
-  th{background:var(--surface2);font-weight:600}
-  td:first-child,th:first-child{text-align:left}
-  .table-scroll{overflow-x:auto}
-  @media (max-width:640px){ .table-scroll{overflow-x:visible} }
-
-  .warn-box{border:2px solid var(--warn-line);background:var(--bad-soft);border-radius:8px;padding:12px 14px;font-size:14px;margin:14px 0}
-  .warn-box strong{color:var(--bad)}
-  .ok{color:var(--good)} .err{color:var(--bad)}
-  .formula{font-family:var(--mono);font-size:13px;background:var(--surface2);border-radius:6px;padding:10px 12px;overflow-x:auto;white-space:nowrap;margin:8px 0}
-  .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;align-items:center}
-
-  .rec{border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:14px 16px;margin-bottom:12px}
-  .rec-head{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline}
-  .rec-head .t{font-weight:700}
-  .rec-head .meta{color:var(--muted);font-size:12.5px}
-  .rec dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:4px 18px;margin:10px 0 0;font-size:13.5px}
-  .rec dl div{display:flex;justify-content:space-between;gap:8px;border-bottom:1px dashed var(--line);padding:3px 0}
-  .rec dt{color:var(--muted)} .rec dd{margin:0;font-family:var(--mono);text-align:right}
-  .rec .gears{font-family:var(--mono);font-size:13px;background:var(--surface2);border-radius:6px;padding:7px 10px;margin-top:10px;overflow-x:auto;white-space:nowrap}
-  .empty{color:var(--muted);text-align:center;padding:28px 10px;border:1px dashed var(--line);border-radius:10px}
-  .solver-out{display:none}
-  .solver-out.show{display:block}
-  .rec-gears-big{font-size:13.5px;background:var(--accent-soft);border-radius:8px;padding:10px 12px;line-height:1.9;overflow-x:auto}
-  .rec-gears-big .g-line{display:block;white-space:nowrap}
-  footer{color:var(--muted);font-size:12.5px;margin-top:26px;border-top:1px solid var(--line);padding-top:10px}
+:root{--bg:#f4f4f2;--surface:#fff;--text:#1a1a1a;--muted:#666;--border:#ddd;--accent:#c2410c;--ok:#15803d}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+.wrap{max-width:720px;margin:0 auto;padding:14px 14px 40px}
+h1{font-size:20px;margin:6px 0 2px}
+.sub{color:var(--muted);font-size:13px;line-height:1.5}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin-top:12px}
+.tabs{display:flex;gap:8px;margin-top:12px}
+.tab{flex:1;padding:10px 4px;text-align:center;border:1px solid var(--border);border-radius:10px;background:#fff;cursor:pointer;font-size:15px}
+.tab.sel{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700}
+label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+input{width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:16px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{padding:8px 14px;border:1px solid var(--border);border-radius:8px;background:#fff;font-size:15px;cursor:pointer}
+.seg button.sel{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700}
+.btn{width:100%;padding:12px;border:0;border-radius:10px;background:var(--accent);color:#fff;font-size:17px;font-weight:700;margin-top:14px;cursor:pointer}
+.btn2{background:#444}
+.out{font-size:26px;font-weight:800;line-height:1.5;letter-spacing:1px}
+.out small{font-size:14px;font-weight:400;color:var(--muted)}
+.kv{font-size:14px;line-height:1.8}
+.warn{color:#b91c1c;font-weight:700}
+.ok{color:var(--ok);font-weight:700}
+.gline{display:flex;align-items:center;gap:6px;margin:8px 0;flex-wrap:nowrap}
+.gline .gname{width:34px;font-weight:700;flex:none}
+.gline .gbtns{display:flex;gap:4px;flex:1;flex-wrap:nowrap}
+.gline .gbtns button{flex:1;min-width:0;padding:8px 0;border:1px solid var(--border);border-radius:7px;background:#fff;font-size:15px;cursor:pointer}
+.gline .gbtns button.sel{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700}
+table{width:100%;border-collapse:collapse;font-size:13px}
+td,th{border-bottom:1px solid #eee;padding:6px 4px;text-align:left;vertical-align:top}
+.mono{font-family:ui-monospace,Menlo,monospace}
+#gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9}
+#gate .box{background:#fff;border:1px solid var(--border);border-radius:12px;padding:20px;width:min(320px,90vw)}
+.hidden{display:none!important}
 </style>
 </head>
 <body>
-
-<!-- ============ 密码门 ============ -->
-<div id="gate">
-  <form class="gate-card" id="gateForm" autocomplete="off">
-    <h1>1号设备 · 预期波阻抗调节</h1>
-    <p>RL-1.5/0.7 交流调节负载 · 输入口令进入。这道门只是挡随手点开的人，口令本身不做加密存储承诺。</p>
-    <label for="gateInput">口令</label>
-    <div class="gate-row">
-      <input type="password" id="gateInput" placeholder="输入口令" />
-      <button type="submit" class="btn">进入</button>
-    </div>
-    <p id="gateErr" role="alert"></p>
-  </form>
+<div id="gate"><div class="box"><h1>1号设备</h1><p class="sub">输入密码后进入</p><input id="pw" type="password" placeholder="密码" autocomplete="off" /><button class="btn" onclick="unlock()">进入</button><p id="pwerr" class="warn hidden">密码不对，再试一次</p></div></div>
+<div class="wrap hidden" id="app">
+<h1>1号设备预期波阻抗调节</h1>
+<p class="sub">目标：输入电压、电流、功率因数，输出电阻、电感组合。依据是厂家实测表（电阻 359 组、电感 209 组，取 A/B/C 中位数）加校准模型，全部 18000 × 4096 种组合都参与求解，不只限于表里的组合。你记的实测会不断修正查表值。</p>
+<div class="tabs">
+<button class="tab sel" data-tab="solve" onclick="showTab('solve')">①目标求解</button>
+<button class="tab" data-tab="gear" onclick="showTab('gear')">②组合与实测</button>
+<button class="tab" data-tab="rec" onclick="showTab('rec')">③记录</button>
 </div>
 
-<!-- ============ 主页面 ============ -->
-<div id="app" class="hidden">
-<div class="wrap">
-  <header class="top">
-    <h1>1号设备 · 预期波阻抗调节</h1>
-    <div class="sub">RL-1.5/0.7 交流调节负载（型号 LR-1.5/0.7）· A / B / C 三相阻抗相同，共用一套组合 · 50 Hz</div>
-  </header>
-
-  <div class="storage-note">
-    <strong>记录存在这台设备的浏览器里</strong>（localStorage）：换浏览器、换手机或清掉浏览器缓存，记录就没了，也不会同步到别处。重要数据请用「记录」页的导出 CSV 留底。
-  </div>
-
-  <nav class="tabs" role="tablist">
-    <button type="button" data-tab="solve" class="active">① 目标求解</button>
-    <button type="button" data-tab="gear">② 组合与实测</button>
-    <button type="button" data-tab="records">③ 记录</button>
-  </nav>
-
-  <!-- ===== ① 目标求解 ===== -->
-  <section class="tab active" id="tab-solve">
-    <div class="card">
-      <h2>目标求解：给定 U / I / cosφ，反推组合</h2>
-      <div class="grid">
-        <div class="field">
-          <label for="tU">目标电压 U（V）</label>
-          <input type="number" id="tU" inputmode="decimal" step="any" min="0" placeholder="如 400" />
-        </div>
-        <div class="field">
-          <label>电压类型</label>
-          <div class="seg" id="tUType" role="group" aria-label="目标电压类型">
-            <button type="button" class="opt-btn sel" data-val="phase">相电压（直接用）</button>
-            <button type="button" class="opt-btn" data-val="line">线电压（÷√3）</button>
-          </div>
-          <div class="unit-note" id="tUConv"></div>
-        </div>
-        <div class="field">
-          <label for="tI">目标电流 I（A）</label>
-          <input type="number" id="tI" inputmode="decimal" step="any" min="0" placeholder="如 500" />
-        </div>
-        <div class="field">
-          <label for="tPf">目标功率因数 cosφ</label>
-          <input type="number" id="tPf" inputmode="decimal" step="any" min="0" max="1" placeholder="如 0.8" />
-          <div class="unit-note">铭牌范围 0.3 ~ 0.95</div>
-        </div>
-      </div>
-      <div class="actions">
-        <button type="button" class="btn" id="solveBtn">求解推荐组合</button>
-        <span class="hint" id="solveMsg"></span>
-      </div>
-    </div>
-
-    <div class="card solver-out" id="solveOut">
-      <h3 style="margin-top:0">目标对应的阻抗</h3>
-      <div class="stats" id="solveNeed"></div>
-      <p class="hint" id="calibNote"></p>
-      <h3>推荐组合（穷举 18,000 种电阻组合 + 4,096 种电感组合取最接近）</h3>
-      <div class="rec-gears-big" id="solveGears"></div>
-      <p class="hint" id="solveTheory"></p>
-      <div class="stats" id="solvePred"></div>
-      <p class="hint">预计值 = 推荐组合的理论值 + 历史平均偏差（ΔR / ΔX）。录的实测记录越多，这个预计越贴近你这台设备的真实表现。</p>
-    </div>
-  </section>
-
-  <!-- ===== ② 组合与实测 ===== -->
-  <section class="tab" id="tab-gear">
-    <div class="card">
-      <h2>电阻（五组并联，总电导相加）</h2>
-      <div class="gear-list" id="rGears"></div>
-      <h2 style="margin-top:22px">电感（串联，电抗相加）</h2>
-      <div class="gear-list" id="lGears"></div>
-      <div class="stats" id="theoryStats"></div>
-      <p class="hint">理论值按铭牌公式算：电阻五组并联取倒数，电感六组查表相加。Rf 不计入理论值，它和接触、引线等偏差一起，靠下面的实测记录来校准。</p>
-    </div>
-
-    <div class="card">
-      <h2>录入实测</h2>
-      <div class="grid">
-        <div class="field">
-          <label for="mU">实测电压 U（V）</label>
-          <input type="number" id="mU" inputmode="decimal" step="any" min="0" placeholder="如 400" />
-        </div>
-        <div class="field">
-          <label>电压类型</label>
-          <div class="seg" id="mUType" role="group" aria-label="实测电压类型">
-            <button type="button" class="opt-btn sel" data-val="phase">相电压（直接用）</button>
-            <button type="button" class="opt-btn" data-val="line">线电压（÷√3）</button>
-          </div>
-          <div class="unit-note" id="mUConv"></div>
-        </div>
-        <div class="field">
-          <label for="mI">实测电流 I（A）</label>
-          <input type="number" id="mI" inputmode="decimal" step="any" min="0" placeholder="如 480" />
-        </div>
-        <div class="field">
-          <label for="mPf">实测功率因数 cosφ</label>
-          <input type="number" id="mPf" inputmode="decimal" step="any" min="0" max="1" placeholder="如 0.82" />
-        </div>
-        <div class="field">
-          <label>相别（仅备注，三相组合相同）</label>
-          <div class="seg" id="mPhase" role="group" aria-label="相别">
-            <button type="button" class="opt-btn sel" data-val="A">A 相</button>
-            <button type="button" class="opt-btn" data-val="B">B 相</button>
-            <button type="button" class="opt-btn" data-val="C">C 相</button>
-            <button type="button" class="opt-btn" data-val="">不注明</button>
-          </div>
-        </div>
-        <div class="field">
-          <label for="mNote">备注</label>
-          <input type="text" id="mNote" placeholder="可留空" />
-        </div>
-      </div>
-      <div class="stats" id="measStats"></div>
-      <div class="actions">
-        <button type="button" class="btn" id="saveBtn">保存这条记录</button>
-        <span class="hint" id="saveMsg"></span>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== ③ 记录 ===== -->
-  <section class="tab" id="tab-records">
-    <div class="card">
-      <h2>实测记录</h2>
-      <p class="hint" id="recSummary"></p>
-      <div class="actions" style="margin:0 0 14px">
-        <button type="button" class="btn-ghost" id="csvBtn">导出 CSV</button>
-        <button type="button" class="btn-danger" id="clearBtn">清空全部记录</button>
-      </div>
-      <div id="recList"></div>
-    </div>
-  </section>
-
-  <footer>数据来源：设备铭牌照片（A 相 S1806098-1-A / B 相 S1806098-1-B，2019.1）。理论值与实测对不上时以实测为准，偏差会随记录积累自动用于目标求解的修正。</footer>
-</div>
+<div class="card" id="tab-solve">
+<label>电压 U（V）</label><input id="tU" type="number" inputmode="decimal" value="230" />
+<label>电压类型</label><div class="seg" id="tUType"><button data-v="ph" class="sel">相电压</button><button data-v="line">线电压</button></div>
+<label>电流 I（A）</label><input id="tI" type="number" inputmode="decimal" value="25" />
+<label>功率因数 cosφ（0.3~1）</label><input id="tCos" type="number" inputmode="decimal" step="0.01" value="0.87" />
+<label>相别（只做备注）</label><div class="seg" id="tPhase"><button data-v="" class="sel">不注明</button><button data-v="A">A</button><button data-v="B">B</button><button data-v="C">C</button></div>
+<button class="btn" onclick="solve()">求解</button>
+<div id="solveOut" style="margin-top:12px"></div>
+<div class="kv" style="margin-top:10px;color:var(--muted)">思路：Z=U/I，R=Z·cosφ，X=Z·sinφ。电阻用并联理论值加 0.0008 Ω（厂家表 359 组验证，中位误差 0.17%）；电感用单组实测增量求和，再按 5L/6L 互感修正 ×1.065/×1.08，其余 ×1.02（厂家表 209 组验证，中位误差 2.0%）。表里有的组合直接用厂家实测中位数；你记过的组合优先用你的实测中位数。求解是在全部组合里找预测电流和功率因数最接近目标的那一组。</div>
 </div>
 
+<div class="card hidden" id="tab-gear">
+<div id="gearBtns"></div>
+<div class="kv" id="gearInfo" style="margin-top:10px"></div>
+<label>实测电压 U（V）</label><input id="mU" type="number" inputmode="decimal" />
+<label>实测电流 I（A）</label><input id="mI" type="number" inputmode="decimal" />
+<label>实测功率因数 cosφ</label><input id="mCos" type="number" inputmode="decimal" step="0.01" />
+<button class="btn" onclick="saveRecord()">保存这条实测</button>
+<div class="kv" id="gearSave" style="margin-top:10px"></div>
+</div>
+
+<div class="card hidden" id="tab-rec">
+<div class="kv" id="optSummary"></div>
+<div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn2" style="flex:1" onclick="exportCSV()">导出 CSV</button><button class="btn btn2" style="flex:1" onclick="clearRecords()">清空记录</button></div>
+<div id="recList" style="margin-top:12px"></div>
+</div>
+</div>
 <script>
-"use strict";
-/* ================= 铭牌数据（唯一数据源） ================= */
-var R1_TABLE = [0.0338, 0.0386, 0.0450, 0.0540, 0.0675, 0.0900, 0.135, 0.270]; /* R1 选 1~8 的累计 Ω；选 f（值 0）时断开 */
-var R2_VAL = 0.0338;
-var BRANCH = { r3: 2.7, r4: 27, r5: 270 }; /* 每个 Ω */
-var L_TABLE = {
-  L1: [0, 0.0016, 0.0028, 0.0039],
-  L2: [0, 0.0055, 0.0091, 0.0130],
-  L3: [0, 0.0189, 0.032, 0.0464],
-  L4: [0, 0.0655, 0.1165, 0.1732],
-  L5: [0, 0.2402, 0.4447, 0.7057],
-  L6: [0, 0.9531, 1.9005, 3.045]
-};
-var FREQ = 50, OMEGA = 2 * Math.PI * FREQ;
-var LS_KEY = "rl15_records_v1";
-var PWD_HASH = "a21d84d80fcab9ec08db16e87339c08bc4db7aec15b08a37650ced4ac2cd866a";
-
-/* ================= 工具 ================= */
-function $(id){ return document.getElementById(id); }
-function fmt(x, d){ if (x === null || x === undefined || !isFinite(x)) return "—"; return x.toFixed(d === undefined ? 4 : d); }
-function fmtSigned(x, d){ if (!isFinite(x)) return "—"; return (x >= 0 ? "+" : "") + x.toFixed(d === undefined ? 4 : d); }
-function phaseU(u, type){ return type === "line" ? u / Math.sqrt(3) : u; }
-function nowStr(ts){ var d = new Date(ts); function p(n){ return (n < 10 ? "0" : "") + n; } return d.getFullYear() + "-" + p(d.getMonth()+1) + "-" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes()); }
-
-/* ================= 理论计算 ================= */
-function theoryR(g){ /* g: {r1:0..8（0=f 断开）, r2:0/1, r3:0..9, r4:0..9, r5:0..9} */
-  var G = 0;
-  if (g.r1 >= 1) G += 1 / R1_TABLE[g.r1 - 1];
-  if (g.r2 === 1) G += 1 / R2_VAL;
-  G += g.r3 / BRANCH.r3 + g.r4 / BRANCH.r4 + g.r5 / BRANCH.r5;
-  return G > 0 ? 1 / G : Infinity;
+const PW_HASH='a21d84d80fcab9ec08db16e87339c08bc4db7aec15b08a37650ced4ac2cd866a';
+const RTAB=[["119ff", 0.0168], ["118ff", 0.0169], ["117ff", 0.0171], ["116ff", 0.0172], ["115ff", 0.0173], ["114ff", 0.0174], ["113ff", 0.0175], ["112ff", 0.0176], ["111ff", 0.0177], ["11fff", 0.0178], ["219ff", 0.0179], ["218ff", 0.018], ["217ff", 0.0181], ["216ff", 0.0182], ["215ff", 0.0183], ["214ff", 0.0185], ["213ff", 0.0186], ["212ff", 0.0187], ["211ff", 0.0188], ["21fff", 0.0189], ["319ff", 0.019], ["318ff", 0.0191], ["317ff", 0.0193], ["316ff", 0.0194], ["315ff", 0.0195], ["314ff", 0.0197], ["313ff", 0.0198], ["312ff", 0.0199], ["311ff", 0.02], ["31fff", 0.0202], ["419ff", 0.0203], ["418ff", 0.0204], ["417ff", 0.0206], ["416ff", 0.0207], ["415ff", 0.0209], ["414ff", 0.021], ["413ff", 0.0212], ["412ff", 0.0213], ["411ff", 0.0215], ["41fff", 0.0217], ["519ff", 0.0218], ["518ff", 0.022], ["517ff", 0.0221], ["516ff", 0.0223], ["515ff", 0.0225], ["514ff", 0.0226], ["513ff", 0.0228], ["512ff", 0.023], ["511ff", 0.0232], ["51fff", 0.0234], ["619ff", 0.0235], ["618ff", 0.0237], ["617ff", 0.0239], ["616ff", 0.0241], ["615ff", 0.0243], ["614ff", 0.0246], ["613ff", 0.0248], ["612ff", 0.025], ["611ff", 0.0252], ["61fff", 0.0254], ["719ff", 0.0257], ["718ff", 0.0259], ["717ff", 0.0261], ["716ff", 0.0264], ["715ff", 0.0266], ["714ff", 0.0269], ["713ff", 0.0271], ["712ff", 0.0274], ["711ff", 0.0277], ["71fff", 0.0279], ["819ff", 0.0282], ["818ff", 0.0285], ["817ff", 0.0287], ["816ff", 0.029], ["815ff", 0.0293], ["814ff", 0.0296], ["813ff", 0.03], ["812ff", 0.0303], ["811ff", 0.0306], ["81fff", 0.0309], ["f19ff", 0.0313], ["f18ff", 0.0316], ["f17ff", 0.032], ["f16ff", 0.0323], ["f15ff", 0.0327], ["f14ff", 0.0331], ["f13ff", 0.0335], ["f12ff", 0.0338], ["f11ff", 0.0343], ["f1fff", 0.0347], ["1f9ff", 0.0314], ["1f8ff", 0.0317], ["1f7ff", 0.0321], ["1f6ff", 0.0324], ["1f5ff", 0.0328], ["1f4ff", 0.0332], ["1f3ff", 0.0336], ["1f2ff", 0.034], ["1f1ff", 0.0344], ["1ffff", 0.0349], ["2f9ff", 0.0352], ["2f8ff", 0.0356], ["2f7ff", 0.0361], ["2f6ff", 0.0366], ["2f5ff", 0.037], ["2f4ff", 0.0375], ["2f3ff", 0.0381], ["2f2ff", 0.0386], ["2f1ff", 0.0391], ["2ffff", 0.0397], ["3f9ff", 0.0401], ["3f8ff", 0.0407], ["3f7ff", 0.0413], ["3f6ff", 0.042], ["3f5ff", 0.0426], ["3f4ff", 0.0432], ["3f3ff", 0.0439], ["3f2ff", 0.0446], ["3f1ff", 0.0453], ["3ffff", 0.0461], ["4f9ff", 0.0467], ["4f8ff", 0.0475], ["4f7ff", 0.0483], ["4f6ff", 0.0492], ["4f5ff", 0.05], ["4f4ff", 0.051], ["4f3ff", 0.052], ["4f2ff", 0.0529], ["4f1ff", 0.054], ["4ffff", 0.0551], ["5f9ff", 0.056], ["5f8ff", 0.0572], ["5f7ff", 0.0584], ["5f6ff", 0.0596], ["5f5ff", 0.061], ["5f4ff", 0.0623], ["5f3ff", 0.0638], ["5f2ff", 0.0653], ["5f1ff", 0.0669], ["5ffff", 0.0685], ["6f9ff", 0.0701], ["6f8ff", 0.072], ["6f7ff", 0.0739], ["6f6ff", 0.076], ["6f5ff", 0.0781], ["6f4ff", 0.0804], ["6f3ff", 0.0828], ["6f2ff", 0.0854], ["6f1ff", 0.0882], ["6ffff", 0.0911], ["7f9ff", 0.094], ["7f8ff", 0.0973], ["7f7ff", 0.101], ["7f6ff", 0.105], ["7f5ff", 0.11], ["7f4ff", 0.113], ["7f3ff", 0.118], ["7f2ff", 0.124], ["7f1ff", 0.13], ["7ffff", 0.136], ["8f9ff", 0.143], ["8f8ff", 0.151], ["8f7ff", 0.16], ["8f6ff", 0.17], ["8f5ff", 0.181], ["8f4ff", 0.194], ["8f3ff", 0.209], ["8f2ff", 0.227], ["8f1ff", 0.247], ["8ffff", 0.272], ["ff99f", 0.273], ["ff98f", 0.276], ["ff97f", 0.279], ["ff96f", 0.282], ["ff95f", 0.285], ["ff94f", 0.287], ["ff93f", 0.291], ["ff92f", 0.294], ["ff91f", 0.297], ["ff9ff", 0.3], ["ff89f", 0.304], ["ff88f", 0.307], ["ff87f", 0.311], ["ff86f", 0.314], ["ff85f", 0.318], ["ff84f", 0.322], ["ff83f", 0.326], ["ff82f", 0.33], ["ff81f", 0.334], ["ff8ff", 0.338], ["ff79f", 0.342], ["ff78f", 0.346], ["ff77f", 0.351], ["ff76f", 0.356], ["ff75f", 0.36], ["ff74f", 0.365], ["ff73f", 0.37], ["ff72f", 0.375], ["ff71f", 0.381], ["ff7ff", 0.386], ["ff69f", 0.392], ["ff68f", 0.398], ["ff67f", 0.403], ["ff66f", 0.41], ["ff65f", 0.416], ["ff64f", 0.422], ["ff63f", 0.429], ["ff62f", 0.436], ["ff61f", 0.443], ["ff6ff", 0.45], ["ff59f", 0.458], ["ff58f", 0.466], ["ff57f", 0.474], ["ff56f", 0.482], ["ff55f", 0.491], ["ff54f", 0.5], ["ff53f", 0.509], ["ff52f", 0.519], ["ff51f", 0.529], ["ff5ff", 0.54], ["ff49f", 0.551], ["ff48f", 0.562], ["ff47f", 0.574], ["ff46f", 0.587], ["ff45f", 0.6], ["ff44f", 0.613], ["ff43f", 0.627], ["ff42f", 0.642], ["ff41f", 0.658], ["ff4ff", 0.674], ["ff39f", 0.693], ["ff38f", 0.711], ["ff37f", 0.73], ["ff36f", 0.75], ["ff35f", 0.772], ["ff34f", 0.794], ["ff33f", 0.818], ["ff32f", 0.844], ["ff31f", 0.871], ["ff3ff", 0.9], ["ff29f", 0.933], ["ff28f", 0.965], ["ff27f", 1.001], ["ff26f", 1.039], ["ff25f", 1.081], ["ff24f", 1.123], ["ff23f", 1.174], ["ff22f", 1.224], ["ff21f", 1.286], ["ff2ff", 1.35], ["ff19f", 1.422], ["ff18f", 1.5], ["ff17f", 1.588], ["ff16f", 1.686], ["ff15f", 1.798], ["ff14f", 1.926], ["ff13f", 2.071], ["ff12f", 2.242], ["ff11f", 2.443], ["ff1ff", 2.686], ["fff99", 2.729], ["fff98", 2.754], ["fff97", 2.785], ["fff96", 2.814], ["fff95", 2.844], ["fff94", 2.874], ["fff93", 2.905], ["fff92", 2.937], ["fff91", 2.969], ["fff9f", 3.004], ["fff89", 3.032], ["fff88", 3.066], ["fff87", 3.102], ["fff86", 3.138], ["fff85", 3.175], ["fff84", 3.213], ["fff83", 3.252], ["fff82", 3.291], ["fff81", 3.332], ["fff8f", 3.374], ["fff79", 3.418], ["fff78", 3.462], ["fff77", 3.507], ["fff76", 3.553], ["fff75", 3.6], ["fff74", 3.649], ["fff73", 3.699], ["fff72", 3.751], ["fff71", 3.804], ["fff7f", 3.858], ["fff69", 3.913], ["fff68", 3.971], ["fff67", 4.03], ["fff66", 4.091], ["fff65", 4.154], ["fff64", 4.219], ["fff63", 4.286], ["fff62", 4.355], ["fff61", 4.427], ["fff6f", 4.501], ["fff59", 4.579], ["fff58", 4.656], ["fff57", 4.738], ["fff56", 4.823], ["fff55", 4.91], ["fff54", 5.001], ["fff53", 5.095], ["fff52", 5.193], ["fff51", 5.295], ["fff5f", 5.402], ["fff49", 5.512], ["fff48", 5.626], ["fff47", 5.746], ["fff46", 5.871], ["fff45", 6.002], ["fff44", 6.149], ["fff43", 6.282], ["fff42", 6.431], ["fff41", 6.588], ["fff4f", 6.753], ["fff39", 6.924], ["fff38", 7.116], ["fff37", 7.308], ["fff36", 7.511], ["fff35", 7.726], ["fff34", 7.953], ["fff33", 8.195], ["fff32", 8.452], ["fff31", 8.725], ["fff3f", 9.017], ["fff29", 9.313], ["fff28", 9.645], ["fff27", 10.002], ["fff26", 10.387], ["fff25", 10.803], ["fff24", 11.252], ["fff23", 11.74], ["fff22", 12.274], ["fff21", 12.861], ["fff2f", 13.504], ["fff19", 14.208], ["fff18", 14.994], ["fff17", 15.874], ["fff16", 16.864], ["fff15", 17.94], ["fff14", 19.273], ["fff13", 20.76], ["fff12", 22.47], ["fff11", 24.51], ["fff1f", 26.97], ["ffff9", 29.96], ["ffff8", 33.7], ["ffff7", 38.51], ["ffff6", 44.92], ["ffff5", 53.88], ["ffff4", 67.37], ["ffff3", 89.83], ["ffff2", 134.52], ["ffff1", 269.3]];
+const LTAB=[["000000", 0.000691, 0.0022], ["100000", 0.002418, 0.0077], ["200000", 0.003705, 0.0118], ["300000", 0.005118, 0.0163], ["010000", 0.006154, 0.0196], ["110000", 0.00763, 0.0243], ["210000", 0.008886, 0.0283], ["310000", 0.010268, 0.0327], ["020000", 0.010362, 0.033], ["120000", 0.011806, 0.0376], ["220000", 0.013, 0.0414], ["320000", 0.01435, 0.0457], ["030000", 0.015041, 0.0479], ["130000", 0.016454, 0.0524], ["230000", 0.017615, 0.0561], ["330000", 0.018966, 0.0604], ["001000", 0.01862, 0.0593], ["101000", 0.020787, 0.0662], ["201000", 0.022545, 0.0718], ["301000", 0.024837, 0.0791], ["011000", 0.024115, 0.0768], ["111000", 0.026125, 0.0832], ["211000", 0.02782, 0.0886], ["311000", 0.030081, 0.0958], ["021000", 0.028323, 0.0902], ["121000", 0.03027, 0.0964], ["221000", 0.031965, 0.1018], ["321000", 0.034163, 0.1088], ["031000", 0.033001, 0.1051], ["131000", 0.034948, 0.1113], ["231000", 0.036581, 0.1165], ["331000", 0.038716, 0.1233], ["002000", 0.033284, 0.106], ["102000", 0.035608, 0.1134], ["202000", 0.037492, 0.1194], ["302000", 0.039972, 0.1273], ["012000", 0.03881, 0.1236], ["112000", 0.040977, 0.1305], ["212000", 0.042798, 0.1363], ["312000", 0.045247, 0.1441], ["022000", 0.043081, 0.1372], ["122000", 0.045185, 0.1439], ["222000", 0.046912, 0.1494], ["322000", 0.049361, 0.1572], ["032000", 0.047728, 0.152], ["132000", 0.0498, 0.1586], ["232000", 0.051559, 0.1642], ["332000", 0.053914, 0.1717], ["003000", 0.049989, 0.1592], ["103000", 0.052438, 0.167], ["203000", 0.054416, 0.1733], ["303000", 0.056991, 0.1815], ["013000", 0.055547, 0.1769], ["113000", 0.057807, 0.1841], ["213000", 0.059723, 0.1902], ["313000", 0.062298, 0.1984], ["023000", 0.059817, 0.1905], ["123000", 0.062015, 0.1975], ["223000", 0.06393, 0.2036], ["323000", 0.066411, 0.2115], ["033000", 0.064496, 0.2054], ["133000", 0.066662, 0.2123], ["233000", 0.068515, 0.2182], ["333000", 0.070995, 0.2261], ["000100", 0.059754, 0.1903], ["010100", 0.067039, 0.2135], ["020100", 0.073131, 0.2329], ["030100", 0.080761, 0.2572], ["001100", 0.075705, 0.2411], ["011100", 0.083084, 0.2646], ["021100", 0.089207, 0.2841], ["031100", 0.096838, 0.3084], ["002100", 0.089773, 0.2859], ["012100", 0.097183, 0.3095], ["022100", 0.103337, 0.3291], ["032100", 0.110936, 0.3533], ["003100", 0.106069, 0.3378], ["013100", 0.113511, 0.3615], ["023100", 0.119665, 0.3811], ["033100", 0.127264, 0.4053], ["000200", 0.112255, 0.3575], ["010200", 0.120074, 0.3824], ["020200", 0.126605, 0.4032], ["030200", 0.13502, 0.43], ["001200", 0.12761, 0.4064], ["011200", 0.135491, 0.4315], ["021200", 0.141991, 0.4522], ["031200", 0.149966, 0.4776], ["002200", 0.141237, 0.4498], ["012200", 0.14915, 0.475], ["022200", 0.155713, 0.4959], ["032200", 0.164002, 0.5223], ["003200", 0.157063, 0.5002], ["013200", 0.165007, 0.5255], ["023200", 0.17157, 0.5464], ["033200", 0.179891, 0.5729], ["000300", 0.17471, 0.5564], ["010300", 0.182936, 0.5826], ["020300", 0.189813, 0.6045], ["030300", 0.198731, 0.6329], ["001300", 0.18953, 0.6036], ["011300", 0.19782, 0.63], ["021300", 0.204697, 0.6519], ["031300", 0.213551, 0.6801], ["002300", 0.202687, 0.6455], ["012300", 0.210977, 0.6719], ["022300", 0.217885, 0.6939], ["032300", 0.226771, 0.7222], ["003300", 0.217979, 0.6942], ["013300", 0.2263, 0.7207], ["023300", 0.233208, 0.7427], ["033300", 0.242094, 0.771], ["000010", 0.210568, 0.6706], ["001010", 0.232517, 0.7405], ["002010", 0.249787, 0.7955], ["003010", 0.269789, 0.8592], ["000110", 0.282412, 0.8994], ["001110", 0.302413, 0.9631], ["002110", 0.31915, 1.0164], ["003110", 0.33868, 1.0786], ["000210", 0.345086, 1.099], ["001210", 0.364397, 1.1605], ["002210", 0.380662, 1.2123], ["003210", 0.399785, 1.2732], ["000310", 0.421262, 1.3416], ["001310", 0.44004, 1.4014], ["002310", 0.456022, 1.4523], ["003310", 0.474737, 1.5119], ["000020", 0.414951, 1.3215], ["001020", 0.438313, 1.3959], ["002020", 0.45665, 1.4543], ["003020", 0.477845, 1.5218], ["000120", 0.491065, 1.5639], ["001120", 0.512511, 1.6322], ["002120", 0.530252, 1.6887], ["003120", 0.551007, 1.7548], ["000220", 0.557036, 1.774], ["001220", 0.57776, 1.84], ["002220", 0.595093, 1.8952], ["003220", 0.61544, 1.96], ["000320", 0.63742, 2.03], ["001320", 0.65783, 2.095], ["002320", 0.674472, 2.148], ["003320", 0.694568, 2.212], ["000030", 0.677612, 2.158], ["001030", 0.702104, 2.236], ["002030", 0.720944, 2.296], ["003030", 0.743238, 2.367], ["000130", 0.757368, 2.412], ["001130", 0.779976, 2.484], ["002130", 0.798188, 2.542], ["003130", 0.819854, 2.611], ["000230", 0.82582, 2.63], ["001230", 0.8478, 2.7], ["002230", 0.865384, 2.756], ["003230", 0.886736, 2.824], ["000330", 0.909972, 2.898], ["001330", 0.931324, 2.966], ["002330", 0.948908, 3.022], ["003330", 0.969632, 3.088], ["000001", 0.87292, 2.78], ["000101", 0.936348, 2.982], ["000201", 0.991612, 3.158], ["000301", 1.057552, 3.368], ["000011", 1.171848, 3.732], ["000111", 1.247836, 3.974], ["000211", 1.313148, 4.182], ["000311", 1.392904, 4.436], ["000021", 1.445342, 4.603], ["000121", 1.525726, 4.859], ["000221", 1.594492, 5.078], ["000321", 1.678644, 5.346], ["000031", 1.80236, 5.74], ["000131", 1.886198, 6.007], ["000231", 1.957476, 6.234], ["000331", 2.045082, 6.513], ["000002", 1.795766, 5.719], ["000102", 1.86045, 5.925], ["000202", 1.916656, 6.104], ["000302", 1.983538, 6.317], ["000012", 2.125152, 6.768], ["000112", 2.20271, 7.015], ["000212", 2.269278, 7.227], ["000312", 2.35029, 7.485], ["000022", 2.423138, 7.717], ["000122", 2.505092, 7.978], ["000222", 2.5748, 8.2], ["000322", 2.660208, 8.472], ["000032", 2.812812, 8.958], ["000132", 2.892882, 9.213], ["000232", 2.970754, 9.461], ["000332", 3.059616, 9.744], ["000003", 2.966044, 9.446], ["000103", 3.032298, 9.657], ["000203", 3.089132, 9.838], ["000303", 3.15727, 10.055], ["000013", 3.318666, 10.569], ["000113", 3.397794, 10.821], ["000213", 3.465304, 11.036], ["000313", 3.547258, 11.297], ["000023", 3.636434, 11.581], ["000123", 3.719958, 11.847], ["000223", 3.790608, 12.072], ["000323", 3.877272, 12.348], ["000033", 4.052798, 12.907], ["000133", 4.139462, 13.183], ["000233", 4.212938, 13.417], ["000333", 4.302742, 13.703], ["333333", 4.41327, 14.055]];
+const R0={1:0.0338,2:0.0386,3:0.0450,4:0.0540,5:0.0675,6:0.0900,7:0.135,8:0.270};
+const INC={'0,1':0.001727,'0,2':0.003014,'0,3':0.004427,'1,1':0.005463,'1,2':0.009671,'1,3':0.014350,'2,1':0.017898,'2,2':0.03259,'2,3':0.049298,'3,1':0.059063,'3,2':0.11156,'3,3':0.174019,'4,1':0.20988,'4,2':0.41426,'4,3':0.67692,'5,1':0.87223,'5,2':1.79508,'5,3':2.96535};
+const RMAP=new Map(RTAB.map(r=>[r[0],r[1]]));
+const LMAP=new Map(LTAB.map(r=>[r[0],r[1]]));
+function rModel(code){
+  let G=0;
+  const c=code.split('');
+  if(c[0]!=='f') G+=1/R0[+c[0]];
+  if(c[1]!=='f') G+=1/0.0338;
+  if(c[2]!=='f') G+=+c[2]/2.7;
+  if(c[3]!=='f') G+=+c[3]/27;
+  if(c[4]!=='f') G+=+c[4]/270;
+  return G>0 ? 1/G+0.0008 : Infinity;
 }
-function rDisp(v){ return v === 0 ? "f" : String(v); }
-function theoryX(g){ /* g: {L1..L6: 0..3} */
-  var x = 0, k;
-  for (k in L_TABLE) x += L_TABLE[k][g[k]];
-  return x;
+function lModel(code){
+  const g=code.split('').map(Number);
+  let x=0.000691;
+  g.forEach((v,i)=>{ if(v>0) x+=INC[i+','+v]; });
+  const f=g[5]>0?1.08:(g[4]>0?1.065:1.02);
+  return x*f;
 }
-
-/* ================= 记录存储（localStorage） ================= */
-function loadRecords(){
-  try { var raw = localStorage.getItem(LS_KEY); var arr = raw ? JSON.parse(raw) : []; return Array.isArray(arr) ? arr : []; }
-  catch(e){ return []; }
+function median(a){ const s=[...a].sort((x,y)=>x-y); const m=s.length>>1; return s.length%2? s[m]:(s[m-1]+s[m])/2; }
+function loadRecs(){ try{ return JSON.parse(localStorage.getItem('yuqibo_records_v2')||'[]'); }catch(e){ return []; } }
+function saveRecs(r){ localStorage.setItem('yuqibo_records_v2', JSON.stringify(r)); }
+function effR(code){
+  const vals=[]; if(RMAP.has(code)) vals.push(RMAP.get(code));
+  loadRecs().forEach(r=>{ if(r.rcode===code) vals.push(r.Rm); });
+  return vals.length? median(vals): rModel(code);
 }
-function saveRecords(arr){ try { localStorage.setItem(LS_KEY, JSON.stringify(arr)); } catch(e){} }
-function avgDelta(){
-  var recs = loadRecords();
-  if (!recs.length) return null;
-  var sr = 0, sx = 0;
-  recs.forEach(function(r){ sr += r.dR; sx += r.dX; });
-  return { dR: sr / recs.length, dX: sx / recs.length, n: recs.length };
+function effL(code){
+  const vals=[]; if(LMAP.has(code)) vals.push(LMAP.get(code));
+  loadRecs().forEach(r=>{ if(r.lcode===code) vals.push(r.Xm); });
+  return vals.length? median(vals): lModel(code);
 }
-
-/* ================= 密码门 ================= */
-function unlock(){
-  $("gate").classList.add("hidden");
-  $("app").classList.remove("hidden");
+function srcR(code){
+  if(loadRecs().some(r=>r.rcode===code)) return '你的实测';
+  if(RMAP.has(code)) return '厂家实测';
+  return '校准模型';
 }
-if (sessionStorage.getItem("rl15_unlocked") === "1") unlock();
-$("gateForm").addEventListener("submit", function(ev){
-  ev.preventDefault();
-  var val = $("gateInput").value;
-  if (!val) { $("gateErr").textContent = "先输入口令。"; return; }
-  var enc = new TextEncoder().encode(val);
-  crypto.subtle.digest("SHA-256", enc).then(function(buf){
-    var hex = Array.prototype.map.call(new Uint8Array(buf), function(b){ return ("0" + b.toString(16)).slice(-2); }).join("");
-    if (hex === PWD_HASH) {
-      sessionStorage.setItem("rl15_unlocked", "1");
-      $("gateErr").textContent = "";
-      unlock();
-    } else {
-      $("gateErr").textContent = "口令不对，再试一次。";
-      $("gateInput").select();
+function srcL(code){
+  if(loadRecs().some(r=>r.lcode===code)) return '你的实测';
+  if(LMAP.has(code)) return '厂家实测';
+  return '校准模型';
+}
+async function sha256(s){
+  const b=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+  return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
+}
+async function unlock(){
+  const v=document.getElementById('pw').value;
+  if(await sha256(v)===PW_HASH){ sessionStorage.setItem('yuqibo_ok','1'); document.getElementById('gate').remove(); document.getElementById('app').classList.remove('hidden'); }
+  else document.getElementById('pwerr').classList.remove('hidden');
+}
+if(sessionStorage.getItem('yuqibo_ok')==='1'){ const g=document.getElementById('gate'); if(g) g.remove(); document.getElementById('app').classList.remove('hidden'); }
+function showTab(name){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('sel', t.dataset.tab===name));
+  ['solve','gear','rec'].forEach(n=>document.getElementById('tab-'+n).classList.toggle('hidden', n!==name));
+  if(name==='rec') renderRecs();
+  if(name==='gear') renderGearInfo();
+}
+let segVal={tUType:'ph', tPhase:''};
+document.querySelectorAll('.seg').forEach(seg=>{
+  seg.addEventListener('click', e=>{
+    if(e.target.tagName!=='BUTTON') return;
+    seg.querySelectorAll('button').forEach(b=>b.classList.remove('sel'));
+    e.target.classList.add('sel');
+    segVal[seg.id]=e.target.dataset.v;
+  });
+});
+let target={U:230,I:25,cos:0.87};
+let lastSolve=null;
+function allRCodes(){
+  const out=[]; const r1=['f','1','2','3','4','5','6','7','8'], r2=['f','1'];
+  const r345=['f','1','2','3','4','5','6','7','8','9'];
+  for(const a of r1) for(const b of r2) for(const c of r345) for(const d of r345) for(const e of r345){
+    const code=a+b+c+d+e; const v=effR(code); if(isFinite(v)) out.push([code,v]);
+  }
+  return out;
+}
+function allLCodes(){
+  const out=[];
+  for(let a=0;a<4;a++)for(let b=0;b<4;b++)for(let c=0;c<4;c++)for(let d=0;d<4;d++)for(let e=0;e<4;e++)for(let f=0;f<4;f++){
+    const code=''+a+b+c+d+e+f; out.push([code, effL(code)]);
+  }
+  return out;
+}
+function solve(){
+  const U0=+document.getElementById('tU').value;
+  const I=+document.getElementById('tI').value;
+  const cos=+document.getElementById('tCos').value;
+  if(!(U0>0&&I>0&&cos>0&&cos<=1)){ document.getElementById('solveOut').innerHTML='<p class="warn">先填好电压、电流、功率因数（0.3~1）。</p>'; return; }
+  const U=segVal.tUType==='line'? U0/Math.sqrt(3): U0;
+  target={U,I,cos};
+  const Z=U/I, Rt=Z*cos, Xt=Z*Math.sqrt(1-cos*cos);
+  const Rc=allRCodes().sort((a,b)=>Math.abs(a[1]-Rt)/Rt-Math.abs(b[1]-Rt)/Rt).slice(0,60);
+  const Lc=allLCodes().sort((a,b)=>Math.abs(a[1]-Xt)/Xt-Math.abs(b[1]-Xt)/Xt).slice(0,60);
+  let best=null;
+  for(const [rc,rv] of Rc) for(const [lc,lv] of Lc){
+    const Zp=Math.hypot(rv,lv), Ip=U/Zp, cp=rv/Zp;
+    const s=((Ip-I)/I)**2+((cp-cos)/cos)**2;
+    if(!best||s<best.s) best={s,rc,rv,lc,lv,Ip,cp};
+  }
+  lastSolve={...best, Rt, Xt, Z, U, I, cos, U0};
+  const warn=[];
+  if(Rt<0.0168) warn.push('需要 R 小于厂家表最小值 0.0168 Ω，已取最接近的');
+  if(Rt>269.3) warn.push('需要 R 大于厂家表最大值 269.3 Ω，已取最接近的');
+  if(Xt>4.4133) warn.push('需要 X 大于可调最大值 4.4133 Ω，功率因数达不到目标，已取最接近的');
+  if(Xt<0.0007) warn.push('需要 X 接近 0，已取最小的');
+  document.getElementById('solveOut').innerHTML=
+    '<div class="out">电阻：'+best.rc+'<br>电感：'+best.lc+'</div>'
+    +'<div class="kv">展开：R1='+best.rc[0]+' R2='+best.rc[1]+' R3='+best.rc[2]+' R4='+best.rc[3]+' R5='+best.rc[4]+'；L1='+best.lc[0]+' L2='+best.lc[1]+' L3='+best.lc[2]+' L4='+best.lc[3]+' L5='+best.lc[4]+' L6='+best.lc[5]+'</div>'
+    +'<div class="kv">需要：Z='+Z.toFixed(4)+' Ω，R='+Rt.toFixed(4)+' Ω，X='+Xt.toFixed(4)+' Ω，L='+(Xt/(2*Math.PI*50)*1000).toFixed(2)+' mH<br>'
+    +'查表：R='+best.rv.toFixed(4)+' Ω（'+srcR(best.rc)+'，误差 '+((best.rv-Rt)/Rt*100).toFixed(2)+'%），X='+best.lv.toFixed(4)+' Ω（'+srcL(best.lc)+'，误差 '+((best.lv-Xt)/Xt*100).toFixed(2)+'%）<br>'
+    +'预测：电流 '+best.Ip.toFixed(2)+' A（误差 '+((best.Ip-I)/I*100).toFixed(2)+'%），功率因数 '+best.cp.toFixed(4)+'（误差 '+((best.cp-cos)/cos*100).toFixed(2)+'%）</div>'
+    +(warn.length? '<p class="warn">'+warn.join('；')+'</p>':'<p class="ok">在可调范围内。</p>')
+    +'<button class="btn btn2" onclick="useSolve()">用这组去记录实测</button>';
+}
+function useSolve(){
+  if(!lastSolve) return;
+  setGear('R', lastSolve.rc); setGear('L', lastSolve.lc);
+  document.getElementById('mU').value=target.U; document.getElementById('mI').value=target.I; document.getElementById('mCos').value=target.cos;
+  showTab('gear');
+}
+const GEAR={R:['f','1','2','3','4','5','6','7','8'], L:['0','1','2','3']};
+const gearSel={R:'fff34', L:'333333'};
+function buildGearBtns(){
+  const box=document.getElementById('gearBtns'); box.innerHTML='';
+  const groups=[['R1','R',0],['R2','R',1],['R3','R',2],['R4','R',3],['R5','R',4],['L1','L',0],['L2','L',1],['L3','L',2],['L4','L',3],['L5','L',4],['L6','L',5]];
+  const opts={R:['f','1','2','3','4','5','6','7','8'], L:['0','1','2','3']};
+  for(const [name,kind,idx] of groups){
+    const line=document.createElement('div'); line.className='gline';
+    line.innerHTML='<span class="gname">'+name+'</span>';
+    const btns=document.createElement('div'); btns.className='gbtns';
+    const list=kind==='R'? (idx===1?['f','1']:opts.R) : opts.L;
+    for(const v of list){
+      const b=document.createElement('button'); b.textContent=v;
+      if(gearSel[kind][idx]===v) b.classList.add('sel');
+      b.onclick=()=>{ gearSel[kind]=gearSel[kind].substring(0,idx)+v+gearSel[kind].substring(idx+1); buildGearBtns(); renderGearInfo(); };
+      btns.appendChild(b);
     }
-  }).catch(function(){ $("gateErr").textContent = "当前浏览器算不了校验，换个浏览器试试。"; });
-});
-
-/* ================= 页签 ================= */
-var tabBtns = document.querySelectorAll("nav.tabs button");
-tabBtns.forEach(function(btn){
-  btn.addEventListener("click", function(){
-    tabBtns.forEach(function(b){ b.classList.remove("active"); });
-    btn.classList.add("active");
-    document.querySelectorAll("section.tab").forEach(function(s){ s.classList.remove("active"); });
-    $("tab-" + btn.getAttribute("data-tab")).classList.add("active");
-    if (btn.getAttribute("data-tab") === "records") renderRecords();
-  });
-});
-
-/* ================= ② 组合按钮组（一行一组） ================= */
-var gearState = { r1: 8, r2: 0, r3: 0, r4: 0, r5: 0, L1: 0, L2: 0, L3: 0, L4: 0, L5: 0, L6: 0 };
-var tUTypeVal = "phase", mUTypeVal = "phase", mPhaseVal = "A";
-function gearBtnValR(key, v){
-  if (key === "r1") return v === 0 ? "断开" : fmt(R1_TABLE[v-1]) + " Ω";
-  if (key === "r2") return v === 1 ? "0.0338 Ω" : "断开";
-  return v === 0 ? "断开" : fmt(BRANCH[key] / v) + " Ω";
-}
-function buildGearGroup(box, def){
-  var div = document.createElement("div"); div.className = "gear";
-  var name = document.createElement("div"); name.className = "gear-name"; name.textContent = def.name;
-  var grp = document.createElement("div"); grp.className = "btn-group"; grp.setAttribute("role", "group"); grp.setAttribute("aria-label", def.name);
-  def.opts.forEach(function(v){
-    var b = document.createElement("button"); b.type = "button";
-    b.className = "opt-btn" + (gearState[def.key] === v ? " sel" : "");
-    b.innerHTML = '<span class="b-main">' + def.label(v) + '</span>';
-    b.addEventListener("click", function(){
-      gearState[def.key] = v;
-      grp.querySelectorAll(".opt-btn").forEach(function(x){ x.classList.remove("sel"); });
-      b.classList.add("sel");
-      refreshTheory();
-    });
-    grp.appendChild(b);
-  });
-  div.appendChild(name); div.appendChild(grp); box.appendChild(div);
-}
-function buildGears(){
-  var rDefs = [
-    { key: "r1", name: "R1", opts: [0,1,2,3,4,5,6,7,8], label: function(v){ return rDisp(v); }, val: function(v){ return gearBtnValR("r1", v); } },
-    { key: "r2", name: "R2", opts: [0,1], label: function(v){ return rDisp(v); }, val: function(v){ return gearBtnValR("r2", v); } },
-    { key: "r3", name: "R3", opts: [0,1,2,3,4,5,6,7,8,9], label: function(v){ return rDisp(v); }, val: function(v){ return gearBtnValR("r3", v); } },
-    { key: "r4", name: "R4", opts: [0,1,2,3,4,5,6,7,8,9], label: function(v){ return rDisp(v); }, val: function(v){ return gearBtnValR("r4", v); } },
-    { key: "r5", name: "R5", opts: [0,1,2,3,4,5,6,7,8,9], label: function(v){ return rDisp(v); }, val: function(v){ return gearBtnValR("r5", v); } }
-  ];
-  var rBox = $("rGears"); rBox.innerHTML = "";
-  rDefs.forEach(function(def){ buildGearGroup(rBox, def); });
-  var lBox = $("lGears"); lBox.innerHTML = "";
-  Object.keys(L_TABLE).forEach(function(k){
-    buildGearGroup(lBox, { key: k, name: k, opts: [0,1,2,3],
-      label: function(v){ return String(v); },
-      val: function(v){ return fmt(L_TABLE[k][v]) + " Ω"; } });
-  });
-}
-function setupSeg(id, onChange){
-  var box = $(id);
-  box.querySelectorAll(".opt-btn").forEach(function(b){
-    b.addEventListener("click", function(){
-      box.querySelectorAll(".opt-btn").forEach(function(x){ x.classList.remove("sel"); });
-      b.classList.add("sel");
-      onChange(b.getAttribute("data-val"));
-    });
-  });
-}
-function currentTheory(){
-  var R = theoryR(gearState), X = theoryX(gearState);
-  return { R: R, X: X, Z: Math.sqrt(R*R + X*X), L: X / OMEGA };
-}
-function refreshTheory(){
-  var t = currentTheory();
-  var u = parseFloat($("mU").value), uType = mUTypeVal;
-  var iPred = "—", pfPred = "—";
-  pfPred = fmt(t.R / t.Z, 3);
-  if (u > 0) iPred = fmt(phaseU(u, uType) / t.Z, 1);
-  $("theoryStats").innerHTML =
-    stat("理论电阻 R", fmt(t.R) + " <small>Ω</small>") +
-    stat("理论电抗 X", fmt(t.X) + " <small>Ω</small>") +
-    stat("理论电感 L", fmt(t.L * 1000, 2) + " <small>mH</small>") +
-    stat("理论阻抗 Z", fmt(t.Z) + " <small>Ω</small>") +
-    stat("按实测电压预计电流", iPred + " <small>A</small>") +
-    stat("理论功率因数", pfPred);
-  refreshMeas();
-}
-function stat(k, v){ return '<div class="stat"><div class="k">' + k + '</div><div class="v">' + v + '</div></div>'; }
-
-function measCalc(){
-  var u = parseFloat($("mU").value), i = parseFloat($("mI").value), pf = parseFloat($("mPf").value);
-  if (!(u > 0 && i > 0 && pf > 0 && pf <= 1)) return null;
-  var up = phaseU(u, mUTypeVal);
-  var Z = up / i, R = Z * pf, X = Z * Math.sqrt(1 - pf * pf);
-  return { u: u, uType: mUTypeVal, uPhase: up, i: i, pf: pf, Z: Z, R: R, X: X, L: X / OMEGA };
-}
-function refreshMeas(){
-  var conv = $("mUConv");
-  var u = parseFloat($("mU").value);
-  conv.textContent = (mUTypeVal === "line" && u > 0) ? ("折合相电压 = " + fmt(phaseU(u, "line"), 1) + " V（线电压 ÷√3）") : "";
-  var m = measCalc();
-  if (!m) { $("measStats").innerHTML = '<p class="hint" style="grid-column:1/-1">填上实测电压、电流、功率因数后，这里自动算实测阻抗和与理论的偏差。</p>'; return; }
-  var t = currentTheory();
-  var dR = m.R - t.R, dX = m.X - t.X;
-  $("measStats").innerHTML =
-    stat("实测阻抗 Z", fmt(m.Z) + " <small>Ω</small>") +
-    stat("实测电阻 R", fmt(m.R) + " <small>Ω</small>") +
-    stat("实测电抗 X", fmt(m.X) + " <small>Ω</small>") +
-    stat("实测电感 L", fmt(m.L * 1000, 2) + " <small>mH</small>") +
-    stat("ΔR（实测−理论）", fmtSigned(dR) + " <small>Ω · " + fmtSigned(dR / t.R * 100, 1) + "%</small>") +
-    stat("ΔX（实测−理论）", fmtSigned(dX) + " <small>Ω · " + (t.X > 0 ? fmtSigned(dX / t.X * 100, 1) + "%" : "理论 X=0") + "</small>");
-}
-["mU","mI","mPf"].forEach(function(id){ $(id).addEventListener("input", function(){ refreshTheory(); }); });
-
-$("saveBtn").addEventListener("click", function(){
-  var m = measCalc();
-  var msg = $("saveMsg");
-  if (!m) { msg.innerHTML = '<span class="err">先把实测电压、电流、功率因数填全（cosφ 要在 0~1 之间）。</span>'; return; }
-  var t = currentTheory();
-  var rec = {
-    ts: Date.now(),
-    gears: JSON.parse(JSON.stringify(gearState)),
-    theoryR: t.R, theoryX: t.X,
-    u: m.u, uType: m.uType, uPhase: m.uPhase, i: m.i, pf: m.pf,
-    measZ: m.Z, measR: m.R, measX: m.X, measL: m.L,
-    dR: m.R - t.R, dX: m.X - t.X,
-    phase: mPhaseVal, note: $("mNote").value.trim()
-  };
-  var recs = loadRecords(); recs.unshift(rec); saveRecords(recs);
-  msg.innerHTML = '<span class="ok">已保存到本浏览器（现在共 ' + recs.length + ' 条）。到「记录」页可以看、删、导出。</span>';
-});
-
-/* ================= ① 目标求解 ================= */
-var R_COMBOS = null, L_COMBOS = null;
-function buildCombos(){
-  if (R_COMBOS) return;
-  R_COMBOS = []; L_COMBOS = [];
-  var a, b, c, d, e;
-  for (a = 0; a <= 8; a++) for (b = 0; b <= 1; b++) for (c = 0; c <= 9; c++) for (d = 0; d <= 9; d++) for (e = 0; e <= 9; e++) {
-    var g = { r1: a, r2: b, r3: c, r4: d, r5: e };
-    R_COMBOS.push({ g: g, R: theoryR(g) });
-  }
-  var keys = Object.keys(L_TABLE), idx = [0,0,0,0,0,0], total = 4096, n, j;
-  for (n = 0; n < total; n++) {
-    var tmp = n, gg = {}, x = 0;
-    for (j = 5; j >= 0; j--) { idx[j] = tmp % 4; tmp = Math.floor(tmp / 4); }
-    keys.forEach(function(k, j2){ gg[k] = idx[j2]; x += L_TABLE[k][idx[j2]]; });
-    L_COMBOS.push({ g: gg, X: x });
+    line.appendChild(btns); box.appendChild(line);
   }
 }
-function nearest(combos, key, target){
-  var best = null, bd = Infinity;
-  combos.forEach(function(c){ var dd = Math.abs(c[key] - target); if (dd < bd) { bd = dd; best = c; } });
-  return best;
-}
-function updateTConv(){
-  var u = parseFloat($("tU").value);
-  $("tUConv").textContent = (tUTypeVal === "line" && u > 0) ? ("折合相电压 = " + fmt(phaseU(u, "line"), 1) + " V（线电压 ÷√3）") : "";
-}
-$("tU").addEventListener("input", updateTConv);
-
-$("solveBtn").addEventListener("click", function(){
-  var msg = $("solveMsg");
-  var u = parseFloat($("tU").value), i = parseFloat($("tI").value), pf = parseFloat($("tPf").value);
-  if (!(u > 0 && i > 0 && pf > 0 && pf <= 1)) { msg.innerHTML = '<span class="err">目标电压、电流、功率因数都要填，cosφ 在 0~1 之间。</span>'; $("solveOut").classList.remove("show"); return; }
-  msg.textContent = "";
-  var up = phaseU(u, tUTypeVal);
-  var Z = up / i, Rneed = Z * pf, Xneed = Z * Math.sqrt(1 - pf * pf), Lneed = Xneed / OMEGA;
-  var cal = avgDelta();
-  var dR = cal ? cal.dR : 0, dX = cal ? cal.dX : 0;
-  var Rt = Math.max(Rneed - dR, 0.001), Xt = Math.max(Xneed - dX, 0);
-  buildCombos();
-  var rb = nearest(R_COMBOS, "R", Rt), lb = nearest(L_COMBOS, "X", Xt);
-  var Rp = rb.R + dR, Xp = lb.X + dX;
-  var Zp = Math.sqrt(Rp*Rp + Xp*Xp), Ip = up / Zp, pfp = Rp / Zp;
-  $("solveNeed").innerHTML =
-    stat("相电压", fmt(up, 1) + " <small>V</small>") +
-    stat("需要 Z", fmt(Z) + " <small>Ω</small>") +
-    stat("需要 R", fmt(Rneed) + " <small>Ω</small>") +
-    stat("需要 X", fmt(Xneed) + " <small>Ω</small>") +
-    stat("需要 L", fmt(Lneed * 1000, 2) + " <small>mH</small>");
-  $("calibNote").innerHTML = cal
-    ? ("已按 " + cal.n + " 条实测记录的平均偏差修正：ΔR 平均 " + fmtSigned(cal.dR) + " Ω、ΔX 平均 " + fmtSigned(cal.dX) + " Ω，所以要找的理论组合是 R ≈ " + fmt(Rt) + " Ω、X ≈ " + fmt(Xt) + " Ω。")
-    : '<span class="err">未校准：还没有实测记录，现在只能按纯理论值找组合。先到「组合与实测」页录几条实测，求解会自动带上你这台设备的平均偏差。</span>';
-  var g = rb.g, lg = lb.g;
-  $("solveGears").innerHTML =
-    '<span class="g-line">电阻：R1 = ' + rDisp(g.r1) + " ｜ R2 = " + rDisp(g.r2) + " ｜ R3 = " + rDisp(g.r3) + " ｜ R4 = " + rDisp(g.r4) + " ｜ R5 = " + rDisp(g.r5) + "</span>" +
-    '<span class="g-line">电感：L1 = ' + lg.L1 + " ｜ L2 = " + lg.L2 + " ｜ L3 = " + lg.L3 + " ｜ L4 = " + lg.L4 + " ｜ L5 = " + lg.L5 + " ｜ L6 = " + lg.L6 + "</span>";
-  $("solveTheory").textContent = "该组合理论值：R = " + fmt(rb.R) + " Ω，X = " + fmt(lb.X) + " Ω";
-  $("solvePred").innerHTML =
-    stat("预计电阻 R", fmt(Rp) + " <small>Ω</small>") +
-    stat("预计电抗 X", fmt(Xp) + " <small>Ω</small>") +
-    stat("预计电流", fmt(Ip, 1) + " <small>A</small>") +
-    stat("预计功率因数", fmt(pfp, 3)) +
-    stat("电流误差", fmtSigned((Ip - i) / i * 100, 2) + " <small>%</small>") +
-    stat("功率因数误差", fmtSigned(pfp - pf, 3));
-  $("solveOut").classList.add("show");
-});
-
-/* ================= ③ 记录列表 / CSV ================= */
-function gearSummary(g){
-  return "R1:" + rDisp(g.r1) + " R2:" + rDisp(g.r2) + " R3:" + rDisp(g.r3) + " R4:" + rDisp(g.r4) + " R5:" + rDisp(g.r5) +
-    " ｜ L1:" + g.L1 + " L2:" + g.L2 + " L3:" + g.L3 + " L4:" + g.L4 + " L5:" + g.L5 + " L6:" + g.L6;
-}
-function renderRecords(){
-  var recs = loadRecords();
-  var cal = avgDelta();
-  $("recSummary").textContent = recs.length
-    ? ("共 " + recs.length + " 条。平均偏差 ΔR " + fmtSigned(cal.dR) + " Ω、ΔX " + fmtSigned(cal.dX) + " Ω（目标求解正在用这个平均值修正）。记录只存在本浏览器里。")
-    : "还没有记录。先到「组合与实测」页选好组合、填实测数据保存。";
-  var box = $("recList");
-  if (!recs.length) { box.innerHTML = '<div class="empty">暂无记录</div>'; return; }
-  box.innerHTML = "";
-  recs.forEach(function(r, idx){
-    var div = document.createElement("div"); div.className = "rec";
-    var dRp = r.theoryR > 0 ? fmtSigned(r.dR / r.theoryR * 100, 1) + "%" : "—";
-    var dXp = r.theoryX > 0 ? fmtSigned(r.dX / r.theoryX * 100, 1) + "%" : "—";
-    div.innerHTML =
-      '<div class="rec-head"><span class="t">' + nowStr(r.ts) + (r.phase ? " · " + r.phase + " 相" : "") + '</span>' +
-      '<span class="meta">' + (r.note ? escapeHtml(r.note) + " · " : "") + '<button type="button" class="btn-danger btn-small" data-del="' + idx + '">删除</button></span></div>' +
-      '<div class="gears">' + gearSummary(r.gears) + '</div>' +
-      '<dl>' +
-      '<div><dt>实测 U / I / cosφ</dt><dd>' + fmt(r.u, 1) + 'V' + (r.uType === "line" ? "(线)" : "(相)") + ' · ' + fmt(r.i, 1) + 'A · ' + fmt(r.pf, 3) + '</dd></div>' +
-      '<div><dt>理论 R / X</dt><dd>' + fmt(r.theoryR) + ' / ' + fmt(r.theoryX) + ' Ω</dd></div>' +
-      '<div><dt>实测 R / X / L</dt><dd>' + fmt(r.measR) + ' / ' + fmt(r.measX) + ' Ω / ' + fmt(r.measL * 1000, 2) + ' mH</dd></div>' +
-      '<div><dt>ΔR</dt><dd>' + fmtSigned(r.dR) + ' Ω（' + dRp + '）</dd></div>' +
-      '<div><dt>ΔX</dt><dd>' + fmtSigned(r.dX) + ' Ω（' + dXp + '）</dd></div>' +
-      '</dl>';
-    box.appendChild(div);
-  });
-  box.querySelectorAll("[data-del]").forEach(function(btn){
-    btn.addEventListener("click", function(){
-      var recs2 = loadRecords();
-      recs2.splice(parseInt(btn.getAttribute("data-del"), 10), 1);
-      saveRecords(recs2); renderRecords();
-    });
-  });
-}
-function escapeHtml(s){ return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
-
-$("clearBtn").addEventListener("click", function(){
-  if (!loadRecords().length) return;
-  if (this.getAttribute("data-confirm") === "1") {
-    saveRecords([]); renderRecords();
-    this.textContent = "清空全部记录"; this.removeAttribute("data-confirm");
-  } else {
-    this.textContent = "再点一次确认清空（不可恢复）"; this.setAttribute("data-confirm", "1");
-    var btn = this;
-    setTimeout(function(){ btn.textContent = "清空全部记录"; btn.removeAttribute("data-confirm"); }, 4000);
+function setGear(kind, code){ gearSel[kind]=code; buildGearBtns(); renderGearInfo(); }
+function gearCodes(){ return {rcode:gearSel.R, lcode:gearSel.L}; }
+function renderGearInfo(){
+  const {rcode,lcode}=gearCodes();
+  const Rv=effR(rcode), Xv=effL(lcode);
+  let s='<b>当前组合：</b>电阻 '+rcode+'，电感 '+lcode+'<br>'
+    +'电阻：'+Rv.toFixed(4)+' Ω（'+srcR(rcode)+'）<br>'
+    +'电感：'+Xv.toFixed(4)+' Ω，L='+(Xv/(2*Math.PI*50)*1000).toFixed(2)+' mH（'+srcL(lcode)+'）<br>';
+  if(target&&target.U){
+    const Zp=Math.hypot(Rv,Xv);
+    s+='按目标电压 '+target.U.toFixed(1)+' V 算：电流 '+(target.U/Zp).toFixed(2)+' A，功率因数 '+(Rv/Zp).toFixed(4);
   }
-});
-$("csvBtn").addEventListener("click", function(){
-  var recs = loadRecords();
-  if (!recs.length) { $("recSummary").textContent = "还没有记录可导出。"; return; }
-  var head = ["时间","相别","备注","R1","R2","R3数量","R4数量","R5数量","L1","L2","L3","L4","L5","L6","理论R(Ω)","理论X(Ω)","实测U(V)","电压类型","相电压(V)","实测I(A)","实测cosφ","实测Z(Ω)","实测R(Ω)","实测X(Ω)","实测L(mH)","ΔR(Ω)","ΔR%","ΔX(Ω)","ΔX%"];
-  var lines = [head.join(",")];
-  recs.slice().reverse().forEach(function(r){
-    var row = [nowStr(r.ts), r.phase || "", '"' + String(r.note || "").replace(/"/g, '""') + '"',
-      rDisp(r.gears.r1), rDisp(r.gears.r2), r.gears.r3, r.gears.r4, r.gears.r5,
-      r.gears.L1, r.gears.L2, r.gears.L3, r.gears.L4, r.gears.L5, r.gears.L6,
-      fmt(r.theoryR), fmt(r.theoryX), fmt(r.u, 2), r.uType === "line" ? "线电压" : "相电压", fmt(r.uPhase, 2),
-      fmt(r.i, 2), fmt(r.pf, 4), fmt(r.measZ), fmt(r.measR), fmt(r.measX), fmt(r.measL * 1000, 3),
-      fmtSigned(r.dR), r.theoryR > 0 ? fmt(r.dR / r.theoryR * 100, 2) : "", fmtSigned(r.dX), r.theoryX > 0 ? fmt(r.dX / r.theoryX * 100, 2) : ""];
-    lines.push(row.join(","));
-  });
-  var blob = new Blob(["\ufeff" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
-  var a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "1号设备阻抗实测记录.csv";
-  document.body.appendChild(a); a.click();
-  setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 500);
-});
-
-/* ================= 初始化 ================= */
-setupSeg("tUType", function(v){ tUTypeVal = v; updateTConv(); });
-setupSeg("mUType", function(v){ mUTypeVal = v; refreshTheory(); });
-setupSeg("mPhase", function(v){ mPhaseVal = v; });
-buildGears();
-refreshTheory();
-renderRecords();
+  const nR=loadRecs().filter(r=>r.rcode===rcode).length, nL=loadRecs().filter(r=>r.lcode===rcode).length;
+  if(nR||nL) s+='<br>该组合已有实测 '+nR+' 条（电阻） / '+nL+' 条（电感），查表值已按你的实测修正。';
+  document.getElementById('gearInfo').innerHTML=s;
+}
+function saveRecord(){
+  const U=+document.getElementById('mU').value, I=+document.getElementById('mI').value, cos=+document.getElementById('mCos').value;
+  if(!(U>0&&I>0&&cos>0&&cos<=1)){ document.getElementById('gearSave').innerHTML='<span class="warn">先填好实测电压、电流、功率因数。</span>'; return; }
+  const {rcode,lcode}=gearCodes();
+  const Z=U/I, Rm=Z*cos, Xm=Z*Math.sqrt(1-cos*cos);
+  const recs=loadRecs();
+  recs.push({t:new Date().toISOString().slice(0,19).replace('T',' '), phase:segVal.tPhase||'', rcode, lcode, U, I, cos, Rm:+Rm.toFixed(5), Xm:+Xm.toFixed(5), Rt:lastSolve?+lastSolve.Rt.toFixed(4):null, Xt:lastSolve?+lastSolve.Xt.toFixed(4):null});
+  saveRecs(recs);
+  const dR=(Rm-effR(rcode))/effR(rcode)*100, dX=(Xm-effL(lcode))/effL(lcode)*100;
+  document.getElementById('gearSave').innerHTML='已保存。实测 R='+Rm.toFixed(4)+' Ω，X='+Xm.toFixed(4)+' Ω；与查表值差 R '+dR.toFixed(2)+'%、X '+dX.toFixed(2)+'%（已计入下次求解）。';
+  renderGearInfo();
+}
+function renderRecs(){
+  const recs=loadRecs();
+  const rCodes=new Set(recs.map(r=>r.rcode)), lCodes=new Set(recs.map(r=>r.lcode));
+  const newR=[...rCodes].filter(c=>!RMAP.has(c)).length, newL=[...lCodes].filter(c=>!LMAP.has(c)).length;
+  document.getElementById('optSummary').innerHTML='记录 '+recs.length+' 条；已修正电阻组合 '+rCodes.size+' 个（其中厂家表外新增 '+newR+' 个），电感组合 '+lCodes.size+' 个（其中厂家表外新增 '+newL+' 个）。每次求解都会先用这些实测修正过的查表值。';
+  const list=document.getElementById('recList');
+  if(!recs.length){ list.innerHTML='<p class="sub">还没有记录。</p>'; return; }
+  list.innerHTML='<table><tr><th>时间</th><th>组合</th><th>实测 U/I/cos</th><th>实测 R/X</th><th></th></tr>'
+    + recs.map((r,i)=>'<tr><td>'+r.t.slice(5)+'</td><td class="mono">'+r.rcode+'<br>'+r.lcode+'</td><td>'+r.U+'V '+r.I+'A '+r.cos+'</td><td>'+r.Rm+' Ω<br>'+r.Xm+' Ω</td><td><button onclick="delRec('+i+')">删</button></td></tr>').join('') + '</table>';
+}
+function delRec(i){ const r=loadRecs(); r.splice(i,1); saveRecs(r); renderRecs(); renderGearInfo(); }
+function clearRecords(){ if(!confirm('清空全部记录？')) return; saveRecs([]); renderRecs(); renderGearInfo(); }
+function exportCSV(){
+  const recs=loadRecs();
+  const head='time,phase,rcode,lcode,U,I,cos,Rm,Xm,Rt,Xt\n';
+  const body=recs.map(r=>[r.t,r.phase,r.rcode,r.lcode,r.U,r.I,r.cos,r.Rm,r.Xm,r.Rt??'',r.Xt??''].join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([head+body],{type:'text/csv'}));
+  a.download='yuqibo_records.csv'; a.click();
+}
+buildGearBtns(); renderGearInfo();
 </script>
 </body>
 </html>
