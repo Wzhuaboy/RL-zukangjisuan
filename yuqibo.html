@@ -74,7 +74,9 @@ td,th{border-bottom:1px solid #eee;padding:6px 4px;text-align:left;vertical-alig
 
 <div class="card hidden" id="tab-rec">
 <div class="kv" id="optSummary"></div>
-<div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn2" style="flex:1" onclick="exportCSV()">导出 CSV</button><button class="btn btn2" style="flex:1" onclick="clearRecords()">清空记录</button></div>
+<div class="kv" id="syncStatus" style="margin-top:8px">云端同步：未同步（记录只在本机）。</div>
+<div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn2" style="flex:1" onclick="syncNow(false)">立即同步</button><button class="btn btn2" style="flex:1" onclick="exportCSV()">导出 CSV</button></div>
+<div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn2" style="flex:1" onclick="clearRecords()">清空记录</button></div>
 <div id="recList" style="margin-top:12px"></div>
 </div>
 </div>
@@ -106,6 +108,49 @@ function lModel(code){
 function median(a){ const s=[...a].sort((x,y)=>x-y); const m=s.length>>1; return s.length%2? s[m]:(s[m-1]+s[m])/2; }
 function loadRecs(){ try{ return JSON.parse(localStorage.getItem('yuqibo_records_v2')||'[]'); }catch(e){ return []; } }
 function saveRecs(r){ localStorage.setItem('yuqibo_records_v2', JSON.stringify(r)); }
+const SYNC_URL='https://yuqibo-sync.wangzhanghua001023.workers.dev';
+let syncHash='';
+function newRecId(){ return 'r'+Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+function ensureIds(){ const r=loadRecs(); let ch=false; r.forEach(x=>{ if(!x.id){ x.id=newRecId(); ch=true; } }); if(ch) saveRecs(r); }
+function loadDeleted(){ try{ return JSON.parse(localStorage.getItem('yuqibo_deleted_ids')||'[]'); }catch(e){ return []; } }
+function saveDeleted(d){ localStorage.setItem('yuqibo_deleted_ids', JSON.stringify(d)); }
+function markDeleted(id){ if(!id) return; const d=loadDeleted(); if(!d.includes(id)){ d.push(id); saveDeleted(d); } }
+function getHash(){ return syncHash || sessionStorage.getItem('yuqibo_hash') || ''; }
+function lastCloudAt(){ return +(localStorage.getItem('yuqibo_cloud_at')||'0'); }
+function setSyncStatus(t){ const el=document.getElementById('syncStatus'); if(el) el.textContent=t; try{ localStorage.setItem('yuqibo_sync_status', t); }catch(e){} }
+async function syncNow(silent){
+  const h=getHash();
+  if(!h){ setSyncStatus('云端同步：请刷新页面重新输入密码后再同步。'); if(!silent) alert('请刷新页面重新输入密码后再同步。'); return false; }
+  try{
+    setSyncStatus('云端同步：正在同步…');
+    const gr=await fetch(SYNC_URL+'/api/sync?passHash='+h);
+    const gd=await gr.json();
+    if(!gd.ok){ setSyncStatus('云端同步失败：'+(gd.error||'未知错误')+'（记录已保存在本机）。'); return false; }
+    if(gd.updatedAt && lastCloudAt() && gd.updatedAt < lastCloudAt()){
+      setSyncStatus('云端数据还没更新好，稍后再同步。');
+      return false;
+    }
+    const dead=new Set([...loadDeleted(), ...(gd.deleted||[])]);
+    const byId=new Map();
+    loadRecs().forEach(r=>{ if(r.id) byId.set(r.id,r); });
+    (gd.records||[]).forEach(r=>{ if(r.id && !byId.has(r.id)) byId.set(r.id,r); });
+    const merged=[...byId.values()].filter(r=>!dead.has(r.id));
+    merged.sort((a,b)=>String(a.t||'').localeCompare(String(b.t||'')));
+    const delArr=[...dead];
+    if(!merged.length && !delArr.length){ setSyncStatus('云端同步：本地和云端都没有记录。'); return true; }
+    const pr=await fetch(SYNC_URL+'/api/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({passHash:h,records:merged,deletedIds:delArr})});
+    const pd=await pr.json();
+    if(!pd.ok){ setSyncStatus('云端同步失败：'+(pd.error||'未知错误')+'（记录已保存在本机）。'); return false; }
+    saveRecs(merged); saveDeleted(delArr);
+    localStorage.setItem('yuqibo_cloud_at', String(pd.updatedAt||Date.now()));
+    setSyncStatus('云端同步：已同步，云端 '+pd.count+' 条 · '+new Date().toLocaleString('zh-CN',{hour12:false}));
+    renderRecs(); renderGearInfo();
+    return true;
+  }catch(e){
+    setSyncStatus('云端同步失败（网络问题），记录已保存在本机，稍后再试。');
+    return false;
+  }
+}
 function effR(code){
   const vals=[]; if(RMAP.has(code)) vals.push(RMAP.get(code));
   loadRecs().forEach(r=>{ if(r.rcode===code) vals.push(r.Rm); });
@@ -132,10 +177,11 @@ async function sha256(s){
 }
 async function unlock(){
   const v=document.getElementById('pw').value;
-  if(await sha256(v)===PW_HASH){ sessionStorage.setItem('yuqibo_ok','1'); document.getElementById('gate').remove(); document.getElementById('app').classList.remove('hidden'); }
+  const h=await sha256(v);
+  if(h===PW_HASH){ syncHash=h; sessionStorage.setItem('yuqibo_ok','1'); sessionStorage.setItem('yuqibo_hash',h); document.getElementById('gate').remove(); document.getElementById('app').classList.remove('hidden'); syncNow(true); }
   else document.getElementById('pwerr').classList.remove('hidden');
 }
-if(sessionStorage.getItem('yuqibo_ok')==='1'){ const g=document.getElementById('gate'); if(g) g.remove(); document.getElementById('app').classList.remove('hidden'); }
+if(sessionStorage.getItem('yuqibo_ok')==='1'){ syncHash=sessionStorage.getItem('yuqibo_hash')||''; const g=document.getElementById('gate'); if(g) g.remove(); document.getElementById('app').classList.remove('hidden'); }
 function showTab(name){
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('sel', t.dataset.tab===name));
   ['solve','gear','rec'].forEach(n=>document.getElementById('tab-'+n).classList.toggle('hidden', n!==name));
@@ -247,14 +293,17 @@ function saveRecord(){
   const {rcode,lcode}=gearCodes();
   const Z=U/I, Rm=Z*cos, Xm=Z*Math.sqrt(1-cos*cos);
   const recs=loadRecs();
-  recs.push({t:new Date().toISOString().slice(0,19).replace('T',' '), phase:segVal.tPhase||'', rcode, lcode, U, I, cos, Rm:+Rm.toFixed(5), Xm:+Xm.toFixed(5), Rt:lastSolve?+lastSolve.Rt.toFixed(4):null, Xt:lastSolve?+lastSolve.Xt.toFixed(4):null});
+  recs.push({id:newRecId(), t:new Date().toISOString().slice(0,19).replace('T',' '), phase:segVal.tPhase||'', rcode, lcode, U, I, cos, Rm:+Rm.toFixed(5), Xm:+Xm.toFixed(5), Rt:lastSolve?+lastSolve.Rt.toFixed(4):null, Xt:lastSolve?+lastSolve.Xt.toFixed(4):null});
   saveRecs(recs);
   const dR=(Rm-effR(rcode))/effR(rcode)*100, dX=(Xm-effL(lcode))/effL(lcode)*100;
   document.getElementById('gearSave').innerHTML='已保存。实测 R='+Rm.toFixed(4)+' Ω，X='+Xm.toFixed(4)+' Ω；与查表值差 R '+dR.toFixed(2)+'%、X '+dX.toFixed(2)+'%（已计入下次求解）。';
   renderGearInfo();
+  syncNow(true);
 }
 function renderRecs(){
   const recs=loadRecs();
+  const savedStatus=localStorage.getItem('yuqibo_sync_status');
+  if(savedStatus){ const el=document.getElementById('syncStatus'); if(el) el.textContent=savedStatus; }
   const rCodes=new Set(recs.map(r=>r.rcode)), lCodes=new Set(recs.map(r=>r.lcode));
   const newR=[...rCodes].filter(c=>!RMAP.has(c)).length, newL=[...lCodes].filter(c=>!LMAP.has(c)).length;
   document.getElementById('optSummary').innerHTML='记录 '+recs.length+' 条；已修正电阻组合 '+rCodes.size+' 个（其中厂家表外新增 '+newR+' 个），电感组合 '+lCodes.size+' 个（其中厂家表外新增 '+newL+' 个）。每次求解都会先用这些实测修正过的查表值。';
@@ -263,8 +312,23 @@ function renderRecs(){
   list.innerHTML='<table><tr><th>时间</th><th>组合</th><th>实测 U/I/cos</th><th>实测 R/X</th><th></th></tr>'
     + recs.map((r,i)=>'<tr><td>'+r.t.slice(5)+'</td><td class="mono">'+r.rcode+'<br>'+r.lcode+'</td><td>'+r.U+'V '+r.I+'A '+r.cos+'</td><td>'+r.Rm+' Ω<br>'+r.Xm+' Ω</td><td><button onclick="delRec('+i+')">删</button></td></tr>').join('') + '</table>';
 }
-function delRec(i){ const r=loadRecs(); r.splice(i,1); saveRecs(r); renderRecs(); renderGearInfo(); }
-function clearRecords(){ if(!confirm('清空全部记录？')) return; saveRecs([]); renderRecs(); renderGearInfo(); }
+function delRec(i){ const r=loadRecs(); if(r[i]) markDeleted(r[i].id); r.splice(i,1); saveRecs(r); renderRecs(); renderGearInfo(); syncNow(true); }
+async function clearRecords(){
+  if(!confirm('清空全部记录？本机和云端都会清空。')) return;
+  loadRecs().forEach(r=>markDeleted(r.id));
+  saveRecs([]);
+  const h=getHash();
+  let cloudCleared=false;
+  if(h){
+    try{
+      const cr=await fetch(SYNC_URL+'/api/clear',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({passHash:h})});
+      const cd=await cr.json(); cloudCleared=!!cd.ok;
+    }catch(e){}
+  }
+  if(cloudCleared){ saveDeleted([]); localStorage.removeItem('yuqibo_cloud_at'); setSyncStatus('云端同步：已清空。'); }
+  else { setSyncStatus('云端同步：本机已清空，云端没清掉（网络问题），下次同步时会按删除标记再清。'); }
+  renderRecs(); renderGearInfo();
+}
 function exportCSV(){
   const recs=loadRecs();
   const head='time,phase,rcode,lcode,U,I,cos,Rm,Xm,Rt,Xt\n';
@@ -273,7 +337,8 @@ function exportCSV(){
   a.href=URL.createObjectURL(new Blob([head+body],{type:'text/csv'}));
   a.download='yuqibo_records.csv'; a.click();
 }
-buildGearBtns(); renderGearInfo();
+buildGearBtns(); renderGearInfo(); ensureIds();
+if(sessionStorage.getItem('yuqibo_ok')==='1') syncNow(true);
 </script>
 </body>
 </html>
