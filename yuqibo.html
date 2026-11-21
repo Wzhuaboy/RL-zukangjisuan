@@ -57,9 +57,10 @@ td,th{border-bottom:1px solid #eee;padding:6px 4px;text-align:left;vertical-alig
 <label>电流 I（A）</label><input id="tI" type="number" inputmode="decimal" value="25" />
 <label>功率因数 cosφ（0.3~1）</label><input id="tCos" type="number" inputmode="decimal" step="0.01" value="0.87" />
 <label>相别（只做备注）</label><div class="seg" id="tPhase"><button data-v="" class="sel">不注明</button><button data-v="A">A</button><button data-v="B">B</button><button data-v="C">C</button></div>
+<label>求解相别</label><div class="seg" id="tSolvePhase"><button data-v="" class="sel">三相</button><button data-v="A">A</button><button data-v="B">B</button><button data-v="C">C</button></div>
 <button class="btn" onclick="solve()">求解</button>
 <div id="solveOut" style="margin-top:12px"></div>
-<div class="kv" style="margin-top:10px;color:var(--muted)">思路：Z=U/I，R=Z·cosφ，X=Z·sinφ。电阻用并联理论值加 0.0008 Ω（厂家表 359 组验证，中位误差 0.17%）；电感用单组实测增量求和，再按 5L/6L 互感修正 ×1.065/×1.08，其余 ×1.02（厂家表 209 组验证，中位误差 2.0%）。表里有的组合直接用厂家实测中位数；你记过的组合优先用你的实测中位数。求解是在全部组合里找预测电流和功率因数最接近目标的那一组。</div>
+<div class="kv" style="margin-top:10px;color:var(--muted)">思路：Z=U/I，R=Z·cosφ，X=Z·sinφ。电阻用并联理论值加 0.0008 Ω（厂家表 359 组验证，中位误差 0.17%）；电感用单组实测增量求和，再按 5L/6L 互感修正 ×1.065/×1.08，其余 ×1.02（厂家表 209 组验证，中位误差 2.0%）。表里有的组合直接用厂家实测中位数；你记过的组合优先用你的实测中位数。求解是在全部组合里找预测电流和功率因数最接近目标的那一组。求解相别默认三相：A/B/C 各按本相的实测分别算一组；选某一相时只算该相。</div>
 </div>
 
 <div class="card hidden" id="tab-gear">
@@ -151,23 +152,23 @@ async function syncNow(silent){
     return false;
   }
 }
-function effR(code){
+function effR(code, phase){
   const vals=[]; if(RMAP.has(code)) vals.push(RMAP.get(code));
-  loadRecs().forEach(r=>{ if(r.rcode===code) vals.push(r.Rm); });
+  loadRecs().forEach(r=>{ if(r.rcode===code && (!phase || r.phase===phase)) vals.push(r.Rm); });
   return vals.length? median(vals): rModel(code);
 }
-function effL(code){
+function effL(code, phase){
   const vals=[]; if(LMAP.has(code)) vals.push(LMAP.get(code));
-  loadRecs().forEach(r=>{ if(r.lcode===code) vals.push(r.Xm); });
+  loadRecs().forEach(r=>{ if(r.lcode===code && (!phase || r.phase===phase)) vals.push(r.Xm); });
   return vals.length? median(vals): lModel(code);
 }
-function srcR(code){
-  if(loadRecs().some(r=>r.rcode===code)) return '你的实测';
+function srcR(code, phase){
+  if(loadRecs().some(r=>r.rcode===code && (!phase || r.phase===phase))) return '你的实测';
   if(RMAP.has(code)) return '厂家实测';
   return '校准模型';
 }
-function srcL(code){
-  if(loadRecs().some(r=>r.lcode===code)) return '你的实测';
+function srcL(code, phase){
+  if(loadRecs().some(r=>r.lcode===code && (!phase || r.phase===phase))) return '你的实测';
   if(LMAP.has(code)) return '厂家实测';
   return '校准模型';
 }
@@ -188,7 +189,7 @@ function showTab(name){
   if(name==='rec') renderRecs();
   if(name==='gear') renderGearInfo();
 }
-let segVal={tUType:'ph', tPhase:''};
+let segVal={tUType:'ph', tPhase:'', tSolvePhase:''};
 document.querySelectorAll('.seg').forEach(seg=>{
   seg.addEventListener('click', e=>{
     if(e.target.tagName!=='BUTTON') return;
@@ -199,20 +200,51 @@ document.querySelectorAll('.seg').forEach(seg=>{
 });
 let target={U:230,I:25,cos:0.87};
 let lastSolve=null;
-function allRCodes(){
+function allRCodes(phase){
   const out=[]; const r1=['f','1','2','3','4','5','6','7','8'], r2=['f','1'];
   const r345=['f','1','2','3','4','5','6','7','8','9'];
   for(const a of r1) for(const b of r2) for(const c of r345) for(const d of r345) for(const e of r345){
-    const code=a+b+c+d+e; const v=effR(code); if(isFinite(v)) out.push([code,v]);
+    const code=a+b+c+d+e; const v=effR(code, phase); if(isFinite(v)) out.push([code,v]);
   }
   return out;
 }
-function allLCodes(){
+function allLCodes(phase){
   const out=[];
   for(let a=0;a<4;a++)for(let b=0;b<4;b++)for(let c=0;c<4;c++)for(let d=0;d<4;d++)for(let e=0;e<4;e++)for(let f=0;f<4;f++){
-    const code=''+a+b+c+d+e+f; out.push([code, effL(code)]);
+    const code=''+a+b+c+d+e+f; out.push([code, effL(code, phase)]);
   }
   return out;
+}
+let solveResults={};
+function setSeg(id, v){
+  segVal[id]=v;
+  const seg=document.getElementById(id);
+  if(seg) seg.querySelectorAll('button').forEach(b=>b.classList.toggle('sel', b.dataset.v===v));
+}
+function findBest(phase, U, Rt, Xt, I, cos){
+  const Rc=allRCodes(phase).sort((a,b)=>Math.abs(a[1]-Rt)/Rt-Math.abs(b[1]-Rt)/Rt).slice(0,60);
+  const Lc=allLCodes(phase).sort((a,b)=>Math.abs(a[1]-Xt)/Xt-Math.abs(b[1]-Xt)/Xt).slice(0,60);
+  let best=null;
+  for(const [rc,rv] of Rc) for(const [lc,lv] of Lc){
+    const Zp=Math.hypot(rv,lv), Ip=U/Zp, cp=rv/Zp;
+    const s=((Ip-I)/I)**2+((cp-cos)/cos)**2;
+    if(!best||s<best.s) best={s,rc,rv,lc,lv,Ip,cp};
+  }
+  return best;
+}
+function solveBlock(phase, best, Rt, Xt, Z, U, I, cos){
+  const warn=[];
+  if(Rt<0.0168) warn.push('需要 R 小于厂家表最小值 0.0168 Ω，已取最接近的');
+  if(Rt>269.3) warn.push('需要 R 大于厂家表最大值 269.3 Ω，已取最接近的');
+  if(Xt>4.4133) warn.push('需要 X 大于可调最大值 4.4133 Ω，功率因数达不到目标，已取最接近的');
+  if(Xt<0.0007) warn.push('需要 X 接近 0，已取最小的');
+  return '<div class="out">电阻：'+best.rc+'<br>电感：'+best.lc+'</div>'
+    +'<div class="kv">展开：R1='+best.rc[0]+' R2='+best.rc[1]+' R3='+best.rc[2]+' R4='+best.rc[3]+' R5='+best.rc[4]+'；L1='+best.lc[0]+' L2='+best.lc[1]+' L3='+best.lc[2]+' L4='+best.lc[3]+' L5='+best.lc[4]+' L6='+best.lc[5]+'</div>'
+    +'<div class="kv">需要：Z='+Z.toFixed(4)+' Ω，R='+Rt.toFixed(4)+' Ω，X='+Xt.toFixed(4)+' Ω，L='+(Xt/(2*Math.PI*50)*1000).toFixed(2)+' mH<br>'
+    +'查表：R='+best.rv.toFixed(4)+' Ω（'+srcR(best.rc, phase)+'，误差 '+((best.rv-Rt)/Rt*100).toFixed(2)+'%），X='+best.lv.toFixed(4)+' Ω（'+srcL(best.lc, phase)+'，误差 '+((best.lv-Xt)/Xt*100).toFixed(2)+'%）<br>'
+    +'预测：电流 '+best.Ip.toFixed(2)+' A（误差 '+((best.Ip-I)/I*100).toFixed(2)+'%），功率因数 '+best.cp.toFixed(4)+'（误差 '+((best.cp-cos)/cos*100).toFixed(2)+'%）</div>'
+    +(warn.length? '<p class="warn">'+warn.join('；')+'</p>':'<p class="ok">在可调范围内。</p>')
+    +'<button class="btn btn2" onclick="useSolve(\''+phase+'\')">用这组去记录实测（'+phase+' 相）</button>';
 }
 function solve(){
   const U0=+document.getElementById('tU').value;
@@ -222,33 +254,27 @@ function solve(){
   const U=segVal.tUType==='line'? U0/Math.sqrt(3): U0;
   target={U,I,cos};
   const Z=U/I, Rt=Z*cos, Xt=Z*Math.sqrt(1-cos*cos);
-  const Rc=allRCodes().sort((a,b)=>Math.abs(a[1]-Rt)/Rt-Math.abs(b[1]-Rt)/Rt).slice(0,60);
-  const Lc=allLCodes().sort((a,b)=>Math.abs(a[1]-Xt)/Xt-Math.abs(b[1]-Xt)/Xt).slice(0,60);
-  let best=null;
-  for(const [rc,rv] of Rc) for(const [lc,lv] of Lc){
-    const Zp=Math.hypot(rv,lv), Ip=U/Zp, cp=rv/Zp;
-    const s=((Ip-I)/I)**2+((cp-cos)/cos)**2;
-    if(!best||s<best.s) best={s,rc,rv,lc,lv,Ip,cp};
+  const sp=segVal.tSolvePhase||'';
+  const phases=sp? [sp] : ['A','B','C'];
+  solveResults={};
+  let html='';
+  for(const ph of phases){
+    const best=findBest(ph, U, Rt, Xt, I, cos);
+    if(!best) continue;
+    solveResults[ph]={...best, Rt, Xt, Z, U, I, cos, U0};
+    if(!sp) html+='<div class="kv" style="margin-top:14px"><b>'+ph+' 相</b></div>';
+    html+=solveBlock(ph, best, Rt, Xt, Z, U, I, cos);
   }
-  lastSolve={...best, Rt, Xt, Z, U, I, cos, U0};
-  const warn=[];
-  if(Rt<0.0168) warn.push('需要 R 小于厂家表最小值 0.0168 Ω，已取最接近的');
-  if(Rt>269.3) warn.push('需要 R 大于厂家表最大值 269.3 Ω，已取最接近的');
-  if(Xt>4.4133) warn.push('需要 X 大于可调最大值 4.4133 Ω，功率因数达不到目标，已取最接近的');
-  if(Xt<0.0007) warn.push('需要 X 接近 0，已取最小的');
-  document.getElementById('solveOut').innerHTML=
-    '<div class="out">电阻：'+best.rc+'<br>电感：'+best.lc+'</div>'
-    +'<div class="kv">展开：R1='+best.rc[0]+' R2='+best.rc[1]+' R3='+best.rc[2]+' R4='+best.rc[3]+' R5='+best.rc[4]+'；L1='+best.lc[0]+' L2='+best.lc[1]+' L3='+best.lc[2]+' L4='+best.lc[3]+' L5='+best.lc[4]+' L6='+best.lc[5]+'</div>'
-    +'<div class="kv">需要：Z='+Z.toFixed(4)+' Ω，R='+Rt.toFixed(4)+' Ω，X='+Xt.toFixed(4)+' Ω，L='+(Xt/(2*Math.PI*50)*1000).toFixed(2)+' mH<br>'
-    +'查表：R='+best.rv.toFixed(4)+' Ω（'+srcR(best.rc)+'，误差 '+((best.rv-Rt)/Rt*100).toFixed(2)+'%），X='+best.lv.toFixed(4)+' Ω（'+srcL(best.lc)+'，误差 '+((best.lv-Xt)/Xt*100).toFixed(2)+'%）<br>'
-    +'预测：电流 '+best.Ip.toFixed(2)+' A（误差 '+((best.Ip-I)/I*100).toFixed(2)+'%），功率因数 '+best.cp.toFixed(4)+'（误差 '+((best.cp-cos)/cos*100).toFixed(2)+'%）</div>'
-    +(warn.length? '<p class="warn">'+warn.join('；')+'</p>':'<p class="ok">在可调范围内。</p>')
-    +'<button class="btn btn2" onclick="useSolve()">用这组去记录实测</button>';
+  lastSolve=solveResults[phases[0]]||null;
+  document.getElementById('solveOut').innerHTML=html;
 }
-function useSolve(){
-  if(!lastSolve) return;
-  setGear('R', lastSolve.rc); setGear('L', lastSolve.lc);
+function useSolve(phase){
+  const r=(phase && solveResults[phase]) || lastSolve;
+  if(!r) return;
+  lastSolve=r;
+  setGear('R', r.rc); setGear('L', r.lc);
   document.getElementById('mU').value=target.U; document.getElementById('mI').value=target.I; document.getElementById('mCos').value=target.cos;
+  if(phase) setSeg('tPhase', phase);
   showTab('gear');
 }
 const GEAR={R:['f','1','2','3','4','5','6','7','8'], L:['0','1','2','3']};
