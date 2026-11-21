@@ -59,7 +59,7 @@ td,th{border-bottom:1px solid #eee;padding:6px 4px;text-align:left;vertical-alig
 <label>求解相别</label><div class="seg" id="tSolvePhase"><button data-v="" class="sel">三相</button><button data-v="A">A</button><button data-v="B">B</button><button data-v="C">C</button></div>
 <button class="btn" onclick="solve()">求解</button>
 <div id="solveOut" style="margin-top:12px"></div>
-<div class="kv" style="margin-top:10px;color:var(--muted)">思路：Z=U/I，R=Z·cosφ，X=Z·sinφ。电阻用并联理论值加 0.0008 Ω（厂家表 359 组验证，中位误差 0.17%）；电感用单组实测增量求和，再按 5L/6L 互感修正 ×1.065/×1.08，其余 ×1.02（厂家表 209 组验证，中位误差 2.0%）。表里有的组合直接用厂家实测中位数；你记过的组合优先用你的实测中位数。求解是在全部组合里找预测电流和功率因数最接近目标的那一组。求解相别默认三相：A/B/C 各按本相的实测分别算一组；选某一相时只算该相。</div>
+<div class="kv" style="margin-top:10px;color:var(--muted)">思路：Z=U/I，R=Z·cosφ，X=Z·sinφ。电阻用并联理论值加 0.0008 Ω（厂家表 359 组验证，中位误差 0.17%）；电感用单组实测增量求和，再按 5L/6L 互感修正 ×1.065/×1.08，其余 ×1.02（厂家表 209 组验证，中位误差 2.0%）。表里有的组合直接用厂家实测中位数；你记过的组合优先用你的实测中位数；没记过的组合，工具会从你本相全部实测里学一个修正系数（实测值/理论值的中位数），乘到理论值上去推算，实测越多推算越准。求解是在全部组合里找预测电流和功率因数最接近目标的那一组。求解相别默认三相：A/B/C 各按本相的实测分别算一组；选某一相时只算该相。</div>
 </div>
 
 <div class="card hidden" id="tab-gear">
@@ -122,8 +122,9 @@ function lModel(code){
   return x*f;
 }
 function median(a){ const s=[...a].sort((x,y)=>x-y); const m=s.length>>1; return s.length%2? s[m]:(s[m-1]+s[m])/2; }
+let _learnVer=0, _learnCache={};
 function loadRecs(){ try{ return JSON.parse(localStorage.getItem('yuqibo_records_v2')||'[]'); }catch(e){ return []; } }
-function saveRecs(r){ localStorage.setItem('yuqibo_records_v2', JSON.stringify(r)); }
+function saveRecs(r){ localStorage.setItem('yuqibo_records_v2', JSON.stringify(r)); _learnVer++; _learnCache={}; }
 const SYNC_URL='https://yuqibo-sync.wangzhanghua001023.workers.dev';
 let syncHash='';
 function newRecId(){ return 'r'+Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
@@ -173,23 +174,64 @@ function factoryR(code){
 function factoryL(code){
   return LMAP.has(code)? LMAP.get(code) : lModel(code);
 }
+function userR(code, phase){
+  const vals=[];
+  loadRecs().forEach(r=>{ if(r.rcode===code && (!phase || r.phase===phase) && r.Rm!=null) vals.push(r.Rm); });
+  return vals.length? median(vals) : null;
+}
+function userL(code, phase){
+  const vals=[];
+  loadRecs().forEach(r=>{ if(r.lcode===code && (!phase || r.phase===phase) && r.Xm!=null) vals.push(r.Xm); });
+  return vals.length? median(vals) : null;
+}
+function learnFactors(phase){
+  const key=(phase||'')+'|'+_learnVer;
+  if(_learnCache[key]) return _learnCache[key];
+  const rRatios=[], xRatios=[];
+  loadRecs().forEach(r=>{
+    if(phase && r.phase!==phase) return;
+    if(r.Rm!=null){
+      const b=factoryR(r.rcode);
+      if(b && isFinite(b) && b>0) rRatios.push(r.Rm/b);
+    }
+    if(r.Xm!=null){
+      const b=factoryL(r.lcode);
+      if(b && isFinite(b) && b>0) xRatios.push(r.Xm/b);
+    }
+  });
+  const res={r: rRatios.length? median(rRatios) : null,
+             x: xRatios.length? median(xRatios) : null,
+             nR: rRatios.length, nX: xRatios.length};
+  _learnCache[key]=res;
+  return res;
+}
 function effR(code, phase){
-  const vals=[]; if(RMAP.has(code)) vals.push(RMAP.get(code));
-  loadRecs().forEach(r=>{ if(r.rcode===code && (!phase || r.phase===phase)) vals.push(r.Rm); });
-  return vals.length? median(vals): rModel(code);
+  const u=userR(code, phase);
+  if(u!=null) return u;
+  const b=factoryR(code);
+  if(!isFinite(b)) return b;
+  const f=learnFactors(phase);
+  if(f.r!=null) return b*f.r;
+  return b;
 }
 function effL(code, phase){
-  const vals=[]; if(LMAP.has(code)) vals.push(LMAP.get(code));
-  loadRecs().forEach(r=>{ if(r.lcode===code && (!phase || r.phase===phase)) vals.push(r.Xm); });
-  return vals.length? median(vals): lModel(code);
+  const u=userL(code, phase);
+  if(u!=null) return u;
+  const b=factoryL(code);
+  if(!isFinite(b)) return b;
+  const f=learnFactors(phase);
+  if(f.x!=null) return b*f.x;
+  return b;
 }
 function srcR(code, phase){
   if(loadRecs().some(r=>r.rcode===code && (!phase || r.phase===phase))) return '你的实测';
+  if(learnFactors(phase).r!=null) return '学习推算';
   if(RMAP.has(code)) return '厂家实测';
   return '校准模型';
 }
 function srcL(code, phase){
   if(loadRecs().some(r=>r.lcode===code && (!phase || r.phase===phase))) return '你的实测';
+  if(learnFactors(phase).x!=null) return '学习推算';
   if(LMAP.has(code)) return '厂家实测';
   return '校准模型';
 }
@@ -259,10 +301,21 @@ function solveBlock(phase, best, Rt, Xt, Z, U, I, cos){
   if(Rt>269.3) warn.push('需要 R 大于厂家表最大值 269.3 Ω，已取最接近的');
   if(Xt>4.4133) warn.push('需要 X 大于可调最大值 4.4133 Ω，功率因数达不到目标，已取最接近的');
   if(Xt<0.0007) warn.push('需要 X 接近 0，已取最小的');
+  const fR=factoryR(best.rc), fL=factoryL(best.lc);
+  const lf=learnFactors(phase);
+  const learnTxt=(lf.r!=null||lf.x!=null)
+    ? '学习总结：'+phase+' 相'
+      +(lf.r!=null? '电阻 '+lf.nR+' 条实测，实测比理论高 '+((lf.r-1)*100).toFixed(1)+'%（×'+lf.r.toFixed(3)+'）' : '电阻暂无实测')
+      +'；'
+      +(lf.x!=null? '电感 '+lf.nX+' 条实测，实测比理论高 '+((lf.x-1)*100).toFixed(1)+'%（×'+lf.x.toFixed(3)+'）' : '电感暂无实测')
+      +'。没实测过的组合按此修正推算。'
+    : '学习总结：'+phase+' 相暂无实测，未做学习修正。';
   return '<div class="out">电阻：'+best.rc+'<br>电感：'+best.lc+'</div>'
     +'<div class="kv">展开：R1='+best.rc[0]+' R2='+best.rc[1]+' R3='+best.rc[2]+' R4='+best.rc[3]+' R5='+best.rc[4]+'；L1='+best.lc[0]+' L2='+best.lc[1]+' L3='+best.lc[2]+' L4='+best.lc[3]+' L5='+best.lc[4]+' L6='+best.lc[5]+'</div>'
     +'<div class="kv">需要：Z='+Z.toFixed(4)+' Ω，R='+Rt.toFixed(4)+' Ω，X='+Xt.toFixed(4)+' Ω，L='+(Xt/(2*Math.PI*50)*1000).toFixed(2)+' mH<br>'
-    +'查表：R='+best.rv.toFixed(4)+' Ω（'+srcR(best.rc, phase)+'，误差 '+((best.rv-Rt)/Rt*100).toFixed(2)+'%），X='+best.lv.toFixed(4)+' Ω（'+srcL(best.lc, phase)+'，误差 '+((best.lv-Xt)/Xt*100).toFixed(2)+'%）<br>'
+    +'理论查表阻抗：R='+fR.toFixed(4)+' Ω，X='+fL.toFixed(4)+' Ω<br>'
+    +'实测推算阻抗：R='+best.rv.toFixed(4)+' Ω（'+srcR(best.rc, phase)+'，误差 '+((best.rv-Rt)/Rt*100).toFixed(2)+'%），X='+best.lv.toFixed(4)+' Ω（'+srcL(best.lc, phase)+'，误差 '+((best.lv-Xt)/Xt*100).toFixed(2)+'%）<br>'
+    +learnTxt+'<br>'
     +'预测：电流 '+best.Ip.toFixed(2)+' A（误差 '+((best.Ip-I)/I*100).toFixed(2)+'%），功率因数 '+best.cp.toFixed(4)+'（误差 '+((best.cp-cos)/cos*100).toFixed(2)+'%）</div>'
     +(warn.length? '<p class="warn">'+warn.join('；')+'</p>':'<p class="ok">在可调范围内。</p>')
     +'<button class="btn btn2" onclick="useSolve(\''+phase+'\')">用这组去记录实测（'+phase+' 相）</button>';
