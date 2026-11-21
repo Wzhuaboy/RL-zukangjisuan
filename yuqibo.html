@@ -56,7 +56,6 @@ td,th{border-bottom:1px solid #eee;padding:6px 4px;text-align:left;vertical-alig
 <label>电压类型</label><div class="seg" id="tUType"><button data-v="ph" class="sel">相电压</button><button data-v="line">线电压</button></div>
 <label>电流 I（A）</label><input id="tI" type="number" inputmode="decimal" value="25" />
 <label>功率因数 cosφ（0.3~1）</label><input id="tCos" type="number" inputmode="decimal" step="0.01" value="0.87" />
-<label>相别（只做备注）</label><div class="seg" id="tPhase"><button data-v="" class="sel">不注明</button><button data-v="A">A</button><button data-v="B">B</button><button data-v="C">C</button></div>
 <label>求解相别</label><div class="seg" id="tSolvePhase"><button data-v="" class="sel">三相</button><button data-v="A">A</button><button data-v="B">B</button><button data-v="C">C</button></div>
 <button class="btn" onclick="solve()">求解</button>
 <div id="solveOut" style="margin-top:12px"></div>
@@ -66,10 +65,26 @@ td,th{border-bottom:1px solid #eee;padding:6px 4px;text-align:left;vertical-alig
 <div class="card hidden" id="tab-gear">
 <div id="gearBtns"></div>
 <div class="kv" id="gearInfo" style="margin-top:10px"></div>
-<label>实测电压 U（V）</label><input id="mU" type="number" inputmode="decimal" />
-<label>实测电流 I（A）</label><input id="mI" type="number" inputmode="decimal" />
-<label>实测功率因数 cosφ</label><input id="mCos" type="number" inputmode="decimal" step="0.01" />
-<button class="btn" onclick="saveRecord()">保存这条实测</button>
+
+<div class="kv" style="margin-top:14px"><b>理论查表阻抗</b><span style="color:var(--muted)">（只按厂家表求解，不含你的实测）</span></div>
+<table id="thTable"><tr><th>相别</th><th>电阻码</th><th>电感码</th></tr>
+<tr><td>A相</td><td class="mono" id="thR_A">—</td><td class="mono" id="thL_A">—</td></tr>
+<tr><td>B相</td><td class="mono" id="thR_B">—</td><td class="mono" id="thL_B">—</td></tr>
+<tr><td>C相</td><td class="mono" id="thR_C">—</td><td class="mono" id="thL_C">—</td></tr></table>
+
+<div class="kv" style="margin-top:10px"><b>按历史实测修正阻抗</b><span style="color:var(--muted)">（含你的实测修正）</span></div>
+<table id="cxTable"><tr><th>相别</th><th>电阻码</th><th>电感码</th></tr>
+<tr><td>A相</td><td class="mono" id="cxR_A">—</td><td class="mono" id="cxL_A">—</td></tr>
+<tr><td>B相</td><td class="mono" id="cxR_B">—</td><td class="mono" id="cxL_B">—</td></tr>
+<tr><td>C相</td><td class="mono" id="cxR_C">—</td><td class="mono" id="cxL_C">—</td></tr></table>
+
+<div class="kv" style="margin-top:14px"><b>实际值</b><span style="color:var(--muted)">（线电压，填三相实测）</span></div>
+<table><tr><th>相别</th><th>电压（V）</th><th>电流（A）</th><th>功率因数</th></tr>
+<tr><td>A相</td><td><input id="aU" type="number" inputmode="decimal" /></td><td><input id="aI" type="number" inputmode="decimal" /></td><td><input id="aCos" type="number" inputmode="decimal" step="0.01" /></td></tr>
+<tr><td>B相</td><td><input id="bU" type="number" inputmode="decimal" /></td><td><input id="bI" type="number" inputmode="decimal" /></td><td><input id="bCos" type="number" inputmode="decimal" step="0.01" /></td></tr>
+<tr><td>C相</td><td><input id="cU" type="number" inputmode="decimal" /></td><td><input id="cI" type="number" inputmode="decimal" /></td><td><input id="cCos" type="number" inputmode="decimal" step="0.01" /></td></tr></table>
+
+<div style="display:flex;gap:8px;margin-top:12px"><button class="btn" style="flex:1;margin-top:0" onclick="saveRecords3()">保存实测记录</button><button class="btn btn2" style="flex:1;margin-top:0" onclick="discardRecords()">放弃保存</button></div>
 <div class="kv" id="gearSave" style="margin-top:10px"></div>
 </div>
 
@@ -152,6 +167,12 @@ async function syncNow(silent){
     return false;
   }
 }
+function factoryR(code){
+  return RMAP.has(code)? RMAP.get(code) : rModel(code);
+}
+function factoryL(code){
+  return LMAP.has(code)? LMAP.get(code) : lModel(code);
+}
 function effR(code, phase){
   const vals=[]; if(RMAP.has(code)) vals.push(RMAP.get(code));
   loadRecs().forEach(r=>{ if(r.rcode===code && (!phase || r.phase===phase)) vals.push(r.Rm); });
@@ -187,9 +208,9 @@ function showTab(name){
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('sel', t.dataset.tab===name));
   ['solve','gear','rec'].forEach(n=>document.getElementById('tab-'+n).classList.toggle('hidden', n!==name));
   if(name==='rec') renderRecs();
-  if(name==='gear') renderGearInfo();
+  if(name==='gear'){ renderGearInfo(); refreshPhaseTable(); }
 }
-let segVal={tUType:'ph', tPhase:'', tSolvePhase:''};
+let segVal={tUType:'ph', tSolvePhase:''};
 document.querySelectorAll('.seg').forEach(seg=>{
   seg.addEventListener('click', e=>{
     if(e.target.tagName!=='BUTTON') return;
@@ -200,18 +221,18 @@ document.querySelectorAll('.seg').forEach(seg=>{
 });
 let target={U:230,I:25,cos:0.87};
 let lastSolve=null;
-function allRCodes(phase){
+function allRCodes(phase, factoryOnly){
   const out=[]; const r1=['f','1','2','3','4','5','6','7','8'], r2=['f','1'];
   const r345=['f','1','2','3','4','5','6','7','8','9'];
   for(const a of r1) for(const b of r2) for(const c of r345) for(const d of r345) for(const e of r345){
-    const code=a+b+c+d+e; const v=effR(code, phase); if(isFinite(v)) out.push([code,v]);
+    const code=a+b+c+d+e; const v=factoryOnly? factoryR(code) : effR(code, phase); if(isFinite(v)) out.push([code,v]);
   }
   return out;
 }
-function allLCodes(phase){
+function allLCodes(phase, factoryOnly){
   const out=[];
   for(let a=0;a<4;a++)for(let b=0;b<4;b++)for(let c=0;c<4;c++)for(let d=0;d<4;d++)for(let e=0;e<4;e++)for(let f=0;f<4;f++){
-    const code=''+a+b+c+d+e+f; out.push([code, effL(code, phase)]);
+    const code=''+a+b+c+d+e+f; out.push([code, factoryOnly? factoryL(code) : effL(code, phase)]);
   }
   return out;
 }
@@ -221,9 +242,9 @@ function setSeg(id, v){
   const seg=document.getElementById(id);
   if(seg) seg.querySelectorAll('button').forEach(b=>b.classList.toggle('sel', b.dataset.v===v));
 }
-function findBest(phase, U, Rt, Xt, I, cos){
-  const Rc=allRCodes(phase).sort((a,b)=>Math.abs(a[1]-Rt)/Rt-Math.abs(b[1]-Rt)/Rt).slice(0,60);
-  const Lc=allLCodes(phase).sort((a,b)=>Math.abs(a[1]-Xt)/Xt-Math.abs(b[1]-Xt)/Xt).slice(0,60);
+function findBest(phase, U, Rt, Xt, I, cos, factoryOnly){
+  const Rc=allRCodes(phase, factoryOnly).sort((a,b)=>Math.abs(a[1]-Rt)/Rt-Math.abs(b[1]-Rt)/Rt).slice(0,60);
+  const Lc=allLCodes(phase, factoryOnly).sort((a,b)=>Math.abs(a[1]-Xt)/Xt-Math.abs(b[1]-Xt)/Xt).slice(0,60);
   let best=null;
   for(const [rc,rv] of Rc) for(const [lc,lv] of Lc){
     const Zp=Math.hypot(rv,lv), Ip=U/Zp, cp=rv/Zp;
@@ -273,9 +294,31 @@ function useSolve(phase){
   if(!r) return;
   lastSolve=r;
   setGear('R', r.rc); setGear('L', r.lc);
-  document.getElementById('mU').value=target.U; document.getElementById('mI').value=target.I; document.getElementById('mCos').value=target.cos;
-  if(phase) setSeg('tPhase', phase);
+  // 预填三相实际值（目标换回线电压），用户再改成实测值
+  const Ul=+(target.U*Math.sqrt(3)).toFixed(1);
+  for(const p of ['a','b','c']){
+    document.getElementById(p+'U').value=Ul;
+    document.getElementById(p+'I').value=target.I;
+    document.getElementById(p+'Cos').value=target.cos;
+  }
   showTab('gear');
+}
+function refreshPhaseTable(){
+  // 按当前目标，分别用厂家表（理论）和实测修正值求解，显示档位码
+  const el=(id)=>document.getElementById(id);
+  if(!target||!target.U||!target.I||!target.cos){ return; }
+  const U=target.U, I=target.I, cos=target.cos;
+  const Z=U/I, Rt=Z*cos, Xt=Z*Math.sqrt(1-cos*cos);
+  const th=findBest('', U, Rt, Xt, I, cos, true);
+  if(th){
+    for(const ph of ['A','B','C']){
+      el('thR_'+ph).textContent=th.rc; el('thL_'+ph).textContent=th.lc;
+    }
+  }
+  for(const ph of ['A','B','C']){
+    const b=findBest(ph, U, Rt, Xt, I, cos, false);
+    if(b){ el('cxR_'+ph).textContent=b.rc; el('cxL_'+ph).textContent=b.lc; }
+  }
 }
 const GEAR={R:['f','1','2','3','4','5','6','7','8'], L:['0','1','2','3']};
 const gearSel={R:'fff34', L:'333333'};
@@ -313,18 +356,35 @@ function renderGearInfo(){
   if(nR||nL) s+='<br>该组合已有实测 '+nR+' 条（电阻） / '+nL+' 条（电感），查表值已按你的实测修正。';
   document.getElementById('gearInfo').innerHTML=s;
 }
-function saveRecord(){
-  const U=+document.getElementById('mU').value, I=+document.getElementById('mI').value, cos=+document.getElementById('mCos').value;
-  if(!(U>0&&I>0&&cos>0&&cos<=1)){ document.getElementById('gearSave').innerHTML='<span class="warn">先填好实测电压、电流、功率因数。</span>'; return; }
+function saveRecords3(){
   const {rcode,lcode}=gearCodes();
-  const Z=U/I, Rm=Z*cos, Xm=Z*Math.sqrt(1-cos*cos);
   const recs=loadRecs();
-  recs.push({id:newRecId(), t:new Date().toISOString().slice(0,19).replace('T',' '), phase:segVal.tPhase||'', rcode, lcode, U, I, cos, Rm:+Rm.toFixed(5), Xm:+Xm.toFixed(5), Rt:lastSolve?+lastSolve.Rt.toFixed(4):null, Xt:lastSolve?+lastSolve.Xt.toFixed(4):null});
+  const made=[];
+  const now=new Date();
+  for(const ph of ['A','B','C']){
+    const p=ph.toLowerCase();
+    const Uline=+document.getElementById(p+'U').value, I=+document.getElementById(p+'I').value, cos=+document.getElementById(p+'Cos').value;
+    if(!(Uline>0&&I>0&&cos>0&&cos<=1)) continue;
+    // 输入是线电压，R/X 按相电压（线电压÷√3）算
+    const Uph=Uline/Math.sqrt(3);
+    const Z=Uph/I, Rm=Z*cos, Xm=Z*Math.sqrt(1-cos*cos);
+    const ls=solveResults[ph];
+    recs.push({id:newRecId(), t:now.toISOString().slice(0,19).replace('T',' '), phase:ph, rcode, lcode, U:Uline, I, cos, Rm:+Rm.toFixed(5), Xm:+Xm.toFixed(5), Rt:ls?+ls.Rt.toFixed(4):(lastSolve?+lastSolve.Rt.toFixed(4):null), Xt:ls?+ls.Xt.toFixed(4):(lastSolve?+lastSolve.Xt.toFixed(4):null)});
+    made.push(ph+' 相：R='+Rm.toFixed(4)+' Ω，X='+Xm.toFixed(4)+' Ω');
+  }
+  if(!made.length){ document.getElementById('gearSave').innerHTML='<span class="warn">先填好至少一相的电压、电流、功率因数。</span>'; return; }
   saveRecs(recs);
-  const dR=(Rm-effR(rcode))/effR(rcode)*100, dX=(Xm-effL(lcode))/effL(lcode)*100;
-  document.getElementById('gearSave').innerHTML='已保存。实测 R='+Rm.toFixed(4)+' Ω，X='+Xm.toFixed(4)+' Ω；与查表值差 R '+dR.toFixed(2)+'%、X '+dX.toFixed(2)+'%（已计入下次求解）。';
-  renderGearInfo();
+  document.getElementById('gearSave').innerHTML='已保存 '+made.length+' 条（'+rcode+' / '+lcode+'）。<br>'+made.join('<br>')+'<br>已计入下次求解。';
+  renderGearInfo(); refreshPhaseTable();
   syncNow(true);
+}
+function discardRecords(){
+  for(const p of ['a','b','c']){
+    document.getElementById(p+'U').value='';
+    document.getElementById(p+'I').value='';
+    document.getElementById(p+'Cos').value='';
+  }
+  document.getElementById('gearSave').innerHTML='<span style="color:var(--muted)">已放弃，未保存。</span>';
 }
 function renderRecs(){
   const recs=loadRecs();
