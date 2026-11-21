@@ -325,12 +325,12 @@ const gearSel={R:'fff34', L:'333333'};
 function buildGearBtns(){
   const box=document.getElementById('gearBtns'); box.innerHTML='';
   const groups=[['R1','R',0],['R2','R',1],['R3','R',2],['R4','R',3],['R5','R',4],['L1','L',0],['L2','L',1],['L3','L',2],['L4','L',3],['L5','L',4],['L6','L',5]];
-  const opts={R:['f','1','2','3','4','5','6','7','8'], L:['0','1','2','3']};
+  const opts={R1:['f','1','2','3','4','5','6','7','8'], R345:['f','1','2','3','4','5','6','7','8','9'], L:['0','1','2','3']};
   for(const [name,kind,idx] of groups){
     const line=document.createElement('div'); line.className='gline';
     line.innerHTML='<span class="gname">'+name+'</span>';
     const btns=document.createElement('div'); btns.className='gbtns';
-    const list=kind==='R'? (idx===1?['f','1']:opts.R) : opts.L;
+    const list=kind==='R'? (idx===1?['f','1'] : idx===0?opts.R1 : opts.R345) : opts.L;
     for(const v of list){
       const b=document.createElement('button'); b.textContent=v;
       if(gearSel[kind][idx]===v) b.classList.add('sel');
