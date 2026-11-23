@@ -1,141 +1,58 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RL交流参数计算器</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>预期波阻抗调节</title>
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif; background: #f0f2f5; padding: 16px; color: #333; }
-.card { max-width: 480px; margin: 0 auto; background: #ffffff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); padding: 20px; }
-h2 { font-size: 20px; text-align: center; margin-bottom: 20px; color: #1a1a1a; }
-.form-group { margin-bottom: 14px; }
-label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; color: #444; }
-input, select { width: 100%; height: 44px; padding: 0 12px; font-size: 16px; border: 1px solid #dcdfe6; border-radius: 8px; background: #fff; }
-input:focus, select:focus { border-color: #007aff; outline: none; }
-.btn-group { display: flex; gap: 10px; margin-top: 20px; }
-button { flex: 1; height: 44px; font-size: 16px; font-weight: 600; border: none; border-radius: 8px; cursor: pointer; }
-.btn-calc { background: #007aff; color: #fff; }
-.btn-reset { background: #e5e5ea; color: #333; }
-.res-box { margin-top: 24px; padding-top: 16px; border-top: 1px solid #eee; }
-.res-title { font-size: 16px; font-weight: 600; margin-bottom: 12px; color: #007aff; }
-.res-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #f0f0f0; font-size: 15px; }
-.res-val { font-weight: 600; color: #1a1a1a; }
-.key-box { border: 2px solid #007aff; background: #f2f7ff; border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; }
-.key-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; font-size: 17px; font-weight: 600; }
-.key-row + .key-row { border-top: 1px dashed #cfe2ff; }
-.key-val { font-weight: 700; color: #007aff; font-size: 19px; }
-.freq-fixed { width: 100%; height: 44px; line-height: 44px; padding: 0 12px; font-size: 16px; color: #666; border: 1px solid #dcdfe6; border-radius: 8px; background: #f5f5f7; }
-.err-msg { color: #ff3b30; font-size: 14px; margin-top: 10px; text-align: center; display: none; }
+:root{--bg:#f4f4f2;--surface:#fff;--text:#1a1a1a;--muted:#666;--border:#ddd;--accent:#c2410c;--ok:#15803d}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+.wrap{max-width:720px;margin:0 auto;padding:14px 14px 40px}
+h1{font-size:20px;margin:6px 0 2px}
+.sub{color:var(--muted);font-size:13px;line-height:1.5}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin-top:12px}
+input{width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:16px}
+.btn{width:100%;padding:12px;border:0;border-radius:10px;background:var(--accent);color:#fff;font-size:17px;font-weight:700;margin-top:14px;cursor:pointer}
+.dev{display:block;text-decoration:none;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:12px}
+.dev:active{background:#f7f7f5}
+.dev b{font-size:18px}
+.dev .tag{display:inline-block;background:var(--accent);color:#fff;font-size:12px;font-weight:700;border-radius:6px;padding:2px 8px;margin-left:8px;vertical-align:2px}
+.dev p{margin:6px 0 0;color:var(--muted);font-size:13px;line-height:1.6}
+.warn{color:#b91c1c;font-weight:700}
+#gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9}
+#gate .box{background:#fff;border:1px solid var(--border);border-radius:12px;padding:20px;width:min(320px,90vw)}
+.hidden{display:none!important}
 </style>
 </head>
 <body>
-<div class="card">
-  <h2>RL交流电路参数计算器</h2>
-
-  <div class="form-group">
-    <label>交流电压 U (V)</label>
-    <input type="number" id="voltage" step="any" value="230" placeholder="例如: 230">
-  </div>
-
-  <div class="form-group">
-    <label>交流电流 I (A)</label>
-    <input type="number" id="current" step="any" value="32" placeholder="例如: 32">
-  </div>
-
-  <div class="form-group">
-    <label>功率因数 cosφ (0 ~ 1)</label>
-    <input type="number" id="pf" step="any" value="0.77" min="0" max="1" placeholder="例如: 0.77">
-  </div>
-
-  <div class="form-group">
-    <label>电源频率 f (Hz)</label>
-    <div class="freq-fixed">50 Hz（固定）</div>
-  </div>
-
-  <div class="btn-group">
-    <button type="button" class="btn-calc" onclick="doCalc()">计算参数</button>
-    <button type="button" class="btn-reset" onclick="doReset()">重置</button>
-  </div>
-
-  <div id="errMsg" class="err-msg"></div>
-
-  <div class="res-box">
-    <div class="res-title">计算结果</div>
-    <div class="key-box">
-      <div class="key-row"><span>电阻 R:</span><span class="key-val" id="resR">-- Ω</span></div>
-      <div class="key-row"><span>电感 L:</span><span class="key-val" id="resL">-- mH</span></div>
-    </div>
-    <div class="res-row"><span>总阻抗 Z:</span><span class="res-val" id="resZ">-- Ω</span></div>
-    <div class="res-row"><span>感抗 XL:</span><span class="res-val" id="resXL">-- Ω</span></div>
-    <div class="res-row"><span>有功功率 P:</span><span class="res-val" id="resP">-- kW</span></div>
-    <div class="res-row"><span>无功功率 Q:</span><span class="res-val" id="resQ">-- kvar</span></div>
-    <div class="res-row"><span>视在功率 S:</span><span class="res-val" id="resS">-- kVA</span></div>
-  </div>
+<div id="gate"><div class="box"><h1>预期波阻抗调节</h1><p class="sub">输入密码后进入</p><input id="pw" type="password" placeholder="密码" autocomplete="off" /><button class="btn" onclick="unlock()">进入</button><p id="pwerr" class="warn hidden">密码不对，再试一次</p></div></div>
+<div class="wrap hidden" id="app">
+<h1>预期波阻抗调节</h1>
+<p class="sub">三台设备各用各的数据，互不干扰。选一台进入，只记这一个网址就行。</p>
+<a class="dev" href="yuqibo.html"><b>1号设备</b><span class="tag">交流</span><p>LR-1.5/0.7 交流调节负载<br>AC 220V~726V，电流 0.1~1.5kA，三相</p></a>
+<a class="dev" href="yuqibo2.html"><b>2号设备</b><span class="tag">交流</span><p>LR-0.125/0.7 交流调节负载<br>AC 220V~726V，电流 1~125A，三相</p></a>
+<a class="dev" href="yuqibo3.html"><b>3号设备</b><span class="tag">直流</span><p>ZLR-0.125/1.5 直流调节负载<br>DC 60V~1500V，电流 1~125A，时间常数 2~15ms</p></a>
 </div>
-
 <script>
-function doCalc() {
-  var err = document.getElementById('errMsg');
-  err.style.display = 'none';
-  err.innerText = '';
-
-  var u = parseFloat(document.getElementById('voltage').value);
-  var i = parseFloat(document.getElementById('current').value);
-  var pf = parseFloat(document.getElementById('pf').value);
-  var f = 50;
-
-if (isNaN(u) || u <= 0 || isNaN(i) || i <= 0) {
-    showErr('请输入有效的正数电压和电流');
-    return;
-  }
-if (isNaN(pf) || pf < 0 || pf > 1) {
-    showErr('功率因数必须在 0 到 1 之间');
-    return;
-  }
-
-  var z = u / i;
-  var r = z * pf;
-  var sinPhi = Math.sqrt(Math.max(0, 1 - pf * pf));
-  var xl = z * sinPhi;
-  var l = (xl / (2 * Math.PI * f)) * 1000;
-  var p = (u * i * pf) / 1000;
-  var q = (u * i * sinPhi) / 1000;
-  var s = (u * i) / 1000;
-
-  document.getElementById('resZ').innerText = z.toFixed(4) + ' Ω';
-  document.getElementById('resR').innerText = r.toFixed(4) + ' Ω';
-  document.getElementById('resXL').innerText = xl.toFixed(4) + ' Ω';
-  document.getElementById('resL').innerText = l.toFixed(3) + ' mH';
-  document.getElementById('resP').innerText = p.toFixed(3) + ' kW';
-  document.getElementById('resQ').innerText = q.toFixed(3) + ' kvar';
-  document.getElementById('resS').innerText = s.toFixed(3) + ' kVA';
+const PW_HASH='a21d84d80fcab9ec08db16e87339c08bc4db7aec15b08a37650ced4ac2cd866a';
+async function sha256(s){
+  const b=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+  return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
 }
-
-function showErr(msg) {
-  var err = document.getElementById('errMsg');
-  err.innerText = msg;
-  err.style.display = 'block';
+function enter(){
+  sessionStorage.setItem('yuqibo_ok','1');
+  sessionStorage.setItem('yuqibo2_ok','1');
+  sessionStorage.setItem('yuqibo3_ok','1');
+  const g=document.getElementById('gate'); if(g) g.remove();
+  document.getElementById('app').classList.remove('hidden');
 }
-
-function doReset() {
-  document.getElementById('voltage').value = '';
-  document.getElementById('current').value = '';
-  document.getElementById('pf').value = '';
-  document.getElementById('errMsg').style.display = 'none';
-
-  document.getElementById('resZ').innerText = '-- Ω';
-  document.getElementById('resR').innerText = '-- Ω';
-  document.getElementById('resXL').innerText = '-- Ω';
-  document.getElementById('resL').innerText = '-- mH';
-  document.getElementById('resP').innerText = '-- kW';
-  document.getElementById('resQ').innerText = '-- kvar';
-  document.getElementById('resS').innerText = '-- kVA';
+async function unlock(){
+  const v=document.getElementById('pw').value;
+  if(await sha256(v)===PW_HASH){ enter(); }
+  else document.getElementById('pwerr').classList.remove('hidden');
 }
-
-window.onload = function() {
-  doCalc();
-};
+if(sessionStorage.getItem('yuqibo_ok')==='1'||sessionStorage.getItem('yuqibo2_ok')==='1'||sessionStorage.getItem('yuqibo3_ok')==='1'){ enter(); }
 </script>
 </body>
 </html>
